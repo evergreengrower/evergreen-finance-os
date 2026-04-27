@@ -180,41 +180,21 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
 }
 
 /* === LOGIN OVERLAY === */
-#login-overlay{
-  position:fixed; inset:0; background:var(--bg); z-index:9999;
-  display:flex; align-items:center; justify-content:center; padding:20px;
-}
+#login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
 #login-overlay.hidden{display:none}
-#login-card{
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:32px 28px; width:100%; max-width:380px; box-shadow:0 8px 30px rgba(0,0,0,0.5);
-}
-#login-card h2{color:var(--bright); font-size:24px; margin-bottom:6px; display:flex; align-items:center; gap:10px}
-#login-card .subtitle{color:var(--text2); font-size:13px; margin-bottom:24px}
-#login-card label{display:block; color:var(--text2); font-size:12px; margin-bottom:6px; margin-top:14px; text-transform:uppercase; letter-spacing:0.5px}
-#login-card input{
-  width:100%; background:var(--bg2); border:1px solid var(--border); color:var(--text);
-  padding:11px 12px; border-radius:8px; font-size:15px; outline:none; transition:border 0.15s;
-}
+#login-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+#login-card h2{color:var(--bright);font-size:24px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+#login-card .subtitle{color:var(--text2);font-size:13px;margin-bottom:24px}
+#login-card label{display:block;color:var(--text2);font-size:12px;margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:0.5px}
+#login-card input{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:11px 12px;border-radius:8px;font-size:15px;outline:none;transition:border 0.15s}
 #login-card input:focus{border-color:var(--green)}
-#login-card button{
-  width:100%; margin-top:22px; background:var(--green); color:#0b1a10; border:none;
-  padding:12px; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;
-  transition:background 0.15s;
-}
+#login-card button{width:100%;margin-top:22px;background:var(--green);color:#0b1a10;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.15s}
 #login-card button:hover{background:var(--bright)}
-#login-card button:disabled{opacity:0.5; cursor:not-allowed}
-#login-error{color:var(--red); font-size:13px; margin-top:12px; min-height:18px}
-
-#btn-logout{
-  margin:8px 12px; padding:8px 12px; background:transparent; color:var(--muted);
-  border:1px solid var(--border); border-radius:6px; font-size:12px; cursor:pointer;
-  transition:all 0.15s;
-}
-#btn-logout:hover{color:var(--red); border-color:var(--red)}
-#sync-status{
-  font-size:10px; color:var(--muted); padding:4px 12px; text-align:center;
-}
+#login-card button:disabled{opacity:0.5;cursor:not-allowed}
+#login-error{color:var(--red);font-size:13px;margin-top:12px;min-height:18px}
+#btn-logout{margin:8px 12px;padding:8px 12px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;transition:all 0.15s}
+#btn-logout:hover{color:var(--red);border-color:var(--red)}
+#sync-status{font-size:10px;color:var(--muted);padding:4px 12px;text-align:center}
 #sync-status.synced{color:var(--green)}
 #sync-status.error{color:var(--red)}
 </style>
@@ -2315,6 +2295,7 @@ const HIST=[
   {l:'Oct 2025',v:302800,gv:41825,s:70890,gf:113297,u:76788,usd:1828,d:9768},
   {l:'Nov 2025',v:399000,gv:45000,s:66880,gf:246800,u:28320,usd:708,d:13300},
   {l:'Mar 2026',v:250875,gv:77623,s:71880,gf:66721,u:34651,usd:888,d:9649},
+  {l:'Abr 2026',v:260555,gv:33950,s:57580,gf:66721,u:102304,usd:924,d:26},
 ];
 const RUB=[
   {n:'VAPS',v:651040,p:31.9,c:'#52b788'},
@@ -2997,21 +2978,16 @@ let cajasNextId = 1;
 
 // ── Persistencia: localStorage como cache + Supabase como fuente de verdad ──
 function saveCajas() {
-  // Cache local inmediato (rápido, offline-friendly)
   try {
     localStorage.setItem('evg_cajas',     JSON.stringify(CAJAS));
     localStorage.setItem('evg_cajas_mov', JSON.stringify(CAJAS_MOV));
     localStorage.setItem('evg_cajas_nid', String(cajasNextId));
   } catch(e) { console.warn('No se pudo guardar cajas en cache local:', e); }
-  // Sync a Supabase (debounced 250ms — agrupa saves seguidos respondiendo rápido)
   if (!_user) return;
   _hasUnsynced = true;
   if (_saveTimer) clearTimeout(_saveTimer);
   setSyncStatus('●  Guardando…', '');
-  _saveTimer = setTimeout(()=>{
-    _saveTimer = null;
-    _lastPush = pushCajasToCloud();
-  }, 250);
+  _saveTimer = setTimeout(()=>{ _saveTimer = null; _lastPush = pushCajasToCloud(); }, 250);
 }
 async function pushCajasToCloud(){
   if (!_user) return;
@@ -3031,36 +3007,29 @@ async function pushCajasToCloud(){
   }
 }
 async function loadCajas() {
-  // 1) Cache local primero (instantáneo)
   let hadLocalData = false;
   try {
     const c = localStorage.getItem('evg_cajas');
     const m = localStorage.getItem('evg_cajas_mov');
     const n = localStorage.getItem('evg_cajas_nid');
-    if (c) { CAJAS       = { ...CAJAS, ...JSON.parse(c) }; hadLocalData = true; }
-    if (m) { CAJAS_MOV   = JSON.parse(m); hadLocalData = true; }
+    if (c) { CAJAS = { ...CAJAS, ...JSON.parse(c) }; hadLocalData = true; }
+    if (m) { CAJAS_MOV = JSON.parse(m); hadLocalData = true; }
     if (n) { cajasNextId = parseInt(n) || 1; }
   } catch(e) { console.warn('No se pudo cargar cache local:', e); }
   if (!_user) return;
   try {
     setSyncStatus('●  Cargando…', '');
-    const { data, error } = await _sb
-      .from('app_state')
-      .select('key,value')
-      .eq('user_id', _user.id);
+    const { data, error } = await _sb.from('app_state').select('key,value').eq('user_id', _user.id);
     if (error) throw error;
     if (data && data.length){
-      // Supabase tiene datos → fuente de verdad, sobrescribe local
       for (const row of data){
-        if (row.key === 'evg_cajas')     CAJAS       = { ...CAJAS, ...row.value };
-        if (row.key === 'evg_cajas_mov') CAJAS_MOV   = Array.isArray(row.value) ? row.value : [];
+        if (row.key === 'evg_cajas')     CAJAS = { ...CAJAS, ...row.value };
+        if (row.key === 'evg_cajas_mov') CAJAS_MOV = Array.isArray(row.value) ? row.value : [];
         if (row.key === 'evg_cajas_nid') cajasNextId = parseInt(row.value) || 1;
       }
       if (typeof renderCajas === 'function') renderCajas();
       setSyncStatus('●  Sincronizado', 'synced');
     } else if (hadLocalData) {
-      // Supabase vacío PERO hay datos en local → primer login post-migración:
-      // empujar el local al cloud para no perderlo.
       console.info('Subiendo datos locales a Supabase (primer login post-migración)');
       await pushCajasToCloud();
     } else {
@@ -3710,16 +3679,8 @@ async function runApp(){
   previewTransfer();
   renderTxSummary();
 }
-
-function showLogin(){
-  const ov = document.getElementById('login-overlay');
-  if (ov) ov.classList.remove('hidden');
-}
-function hideLogin(){
-  const ov = document.getElementById('login-overlay');
-  if (ov) ov.classList.add('hidden');
-}
-
+function showLogin(){ const ov=document.getElementById('login-overlay'); if(ov) ov.classList.remove('hidden'); }
+function hideLogin(){ const ov=document.getElementById('login-overlay'); if(ov) ov.classList.add('hidden'); }
 async function doLogin(ev){
   ev.preventDefault();
   const email = document.getElementById('login-email').value.trim();
@@ -3743,10 +3704,8 @@ async function doLogin(ev){
   }
   return false;
 }
-
 async function doLogout(){
   if (!confirm('¿Cerrar sesión?')) return;
-  // Si hay un save debounceado pendiente, dispararlo ya y esperarlo
   if (_saveTimer) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
@@ -3754,16 +3713,13 @@ async function doLogout(){
   }
   setSyncStatus('●  Guardando antes de salir…', '');
   try { await _lastPush; } catch(e){}
-  // Si todavía hay cambios sin sync (error de red), advertir
   if (_hasUnsynced) {
-    if (!confirm('⚠ Hay cambios que no se sincronizaron a la nube. Si salís ahora pueden perderse al volver desde otro dispositivo. ¿Salir igual?')) return;
+    if (!confirm('⚠ Hay cambios que no se sincronizaron. ¿Salir igual?')) return;
   }
   await _sb.auth.signOut();
-  // NO borramos localStorage — Supabase ya separa por user_id, mantener cache local
-  // permite recuperar datos si por algo Supabase queda desincronizado.
+  // NO borramos localStorage — Supabase ya separa por user_id
   location.reload();
 }
-
 window.addEventListener('load', async ()=>{
   try {
     const { data } = await _sb.auth.getSession();
@@ -3776,13 +3732,11 @@ window.addEventListener('load', async ()=>{
   } catch(e){ console.warn('auth check failed', e); }
   showLogin();
 });
-
-// Avisar al usuario si intenta cerrar la pestaña con cambios sin sincronizar
 window.addEventListener('beforeunload', (ev)=>{
   if (_saveTimer) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
-    pushCajasToCloud(); // fire-and-forget — no podemos await acá
+    pushCajasToCloud();
   }
   if (_hasUnsynced) {
     ev.preventDefault();
@@ -3847,34 +3801,34 @@ const TOP_PRODUCTS = [
 ];
 
 // acum:true = lunes o primer día hábil con liquidación acumulada de fin de semana/feriado
-// Los grandes montos de tarjeta en esos días representan Vie+Sáb+Dom juntos
+// Datos REALES Abril 2026 (sincronizados desde VENTAS DIARIAS del Sheets)
 const VENTAS_DIARIAS = [
-  { fecha:'2026-04-01', efectivo:4200, tarjeta:0     },
-  { fecha:'2026-04-02', efectivo:5100, tarjeta:0     },
-  { fecha:'2026-04-03', efectivo:6800, tarjeta:0     },
-  { fecha:'2026-04-04', efectivo:4500, tarjeta:0     },
-  { fecha:'2026-04-05', efectivo:5900, tarjeta:0     },
-  { fecha:'2026-04-06', efectivo:3200, tarjeta:55220, acum:true, acumDias:'Vie 3 + Sáb 4 + Dom 5 + Lun 6' },
-  { fecha:'2026-04-07', efectivo:4800, tarjeta:2287  },
-  { fecha:'2026-04-08', efectivo:6200, tarjeta:1714  },
-  { fecha:'2026-04-09', efectivo:5400, tarjeta:3547  },
-  { fecha:'2026-04-10', efectivo:4100, tarjeta:4832  },
-  { fecha:'2026-04-11', efectivo:7200, tarjeta:0     },
-  { fecha:'2026-04-12', efectivo:3800, tarjeta:0     },
-  { fecha:'2026-04-13', efectivo:5600, tarjeta:15039, acum:true, acumDias:'Sáb 11 + Dom 12 + Lun 13' },
-  { fecha:'2026-04-14', efectivo:4900, tarjeta:0     },
-  { fecha:'2026-04-15', efectivo:6100, tarjeta:0     },
-  { fecha:'2026-04-16', efectivo:5300, tarjeta:0     },
-  { fecha:'2026-04-17', efectivo:4700, tarjeta:4574  },
-  { fecha:'2026-04-18', efectivo:3900, tarjeta:0     },
-  { fecha:'2026-04-19', efectivo:5200, tarjeta:0     },
-  { fecha:'2026-04-20', efectivo:4600, tarjeta:0     },
-  { fecha:'2026-04-21', efectivo:6800, tarjeta:0     },
-  { fecha:'2026-04-22', efectivo:5100, tarjeta:8532  },
-  { fecha:'2026-04-23', efectivo:4400, tarjeta:7521  },
-  { fecha:'2026-04-24', efectivo:5800, tarjeta:16140 },
-  { fecha:'2026-04-25', efectivo:3600, tarjeta:0     },
-  { fecha:'2026-04-26', efectivo:4875, tarjeta:0     },
+  { fecha:'2026-04-01', efectivo: 5740, tarjeta:  1940, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-02', efectivo: 7940, tarjeta: 11120, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-03', efectivo:12700, tarjeta: 17470, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-04', efectivo: 2980, tarjeta: 13880, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-05', efectivo: 5240, tarjeta:  5800, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
+  { fecha:'2026-04-06', efectivo: 1410, tarjeta:  6530, turnos:'mañana', colabs:'MACA' },
+  { fecha:'2026-04-07', efectivo: 4260, tarjeta:     0, turnos:'mañana,tarde', colabs:'MACA,SARAHI' },
+  { fecha:'2026-04-08', efectivo: 2560, tarjeta:  3650, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
+  { fecha:'2026-04-09', efectivo: 4050, tarjeta:  3450, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
+  { fecha:'2026-04-10', efectivo: 7970, tarjeta:  5500, turnos:'mañana,tarde', colabs:'JULY,MAIK,SARAHI' },
+  { fecha:'2026-04-11', efectivo: 2540, tarjeta:  3000, turnos:'mañana,tarde', colabs:'JULY,MAIK,SARAHI' },
+  { fecha:'2026-04-12', efectivo: 5170, tarjeta:  7220, turnos:'mañana,tarde', colabs:'JULY,MAIK,SARAHI' },
+  { fecha:'2026-04-13', efectivo: 1700, tarjeta:  2360, turnos:'mañana', colabs:'MACA' },
+  { fecha:'2026-04-14', efectivo: 1380, tarjeta:  5280, turnos:'mañana,tarde', colabs:'JULY,MACA,SARAHI' },
+  { fecha:'2026-04-15', efectivo: 1750, tarjeta:  4330, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-16', efectivo: 1750, tarjeta:  2080, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-17', efectivo: 1680, tarjeta:  8465, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-18', efectivo: 4330, tarjeta:  6300, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-19', efectivo: 2970, tarjeta:  7150, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
+  { fecha:'2026-04-20', efectivo:  820, tarjeta:  3800, turnos:'mañana', colabs:'MACA' },
+  { fecha:'2026-04-21', efectivo: 4840, tarjeta:  5240, turnos:'mañana,tarde', colabs:'MACA,SARAHI' },
+  { fecha:'2026-04-22', efectivo:  690, tarjeta: 16670, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-23', efectivo: 1190, tarjeta:  5830, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-24', efectivo: 2680, tarjeta:   980, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-25', efectivo:  780, tarjeta:  2160, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
+  { fecha:'2026-04-26', efectivo: 3140, tarjeta:  6300, turnos:'mañana,tarde', colabs:'MACA,MAIK,SARAHI' },
 ];
 
 let _evSubActivo = null;
@@ -3960,8 +3914,16 @@ function showEvSub(tipo, card) {
             <tbody>${VENTAS_DIARIAS.map(d=>{
               const tot=d.efectivo+d.tarjeta;
               const acumBadge = d.acum ? `<span title="${d.acumDias}" style="font-size:9px;background:rgba(246,173,85,.2);color:var(--yellow);border-radius:4px;padding:1px 4px;margin-left:4px">📦 ${d.acumDias}</span>` : '';
-              return `<tr style="${d.acum?'background:rgba(246,173,85,.05)':''}">
-                <td style="font-size:11px">${d.fecha.slice(5)}${acumBadge}</td>
+              let turnosBadge = '';
+              if (d.turnos) {
+                const tt = d.turnos.toLowerCase();
+                const m  = (tt.includes('mañana')||tt.includes('manana')) ? '☀️' : '';
+                const a  = tt.includes('tarde') ? '🌙' : '';
+                if (m||a) turnosBadge = `<span style="font-size:10px;margin-left:5px;opacity:.85">${m}${a}</span>`;
+              }
+              const colabsTip = d.colabs ? ` title="Colabs: ${d.colabs}"` : '';
+              return `<tr${colabsTip} style="${d.acum?'background:rgba(246,173,85,.05)':''}">
+                <td style="font-size:11px">${d.fecha.slice(5)}${turnosBadge}${acumBadge}</td>
                 <td class="tr mono" style="color:var(--green)">${d.efectivo>0?fUY(d.efectivo):'—'}</td>
                 <td class="tr mono" style="color:${d.acum?'var(--yellow)':'var(--blue)'}">${d.tarjeta>0?fUY(d.tarjeta):'—'}</td>
                 <td class="tr mono" style="font-weight:700">${fUY(tot)}</td>
@@ -4224,15 +4186,4 @@ function renderGastosPersonal() {
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${t.fecha}</td>
       <td style="font-weight:600">${t.benef}</td>
-      <td style="font-size:11px;color:var(--muted)">${t.cat}</td>
-      <td class="tr mono" style="color:var(--red);font-weight:700">${fOrig(t)}</td>
-      <td class="tr" style="font-size:11px;color:var(--muted)">${t.moneda !== 'UY' ? '≈ '+fUY(uy) : ''}</td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Sin gastos personales</td></tr>`;
-}
-
-</script>
-
-<section id="gastos-personal" class="sec">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px">
-    <button onclick="go('dash',null)" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11px;
+      <td sty
