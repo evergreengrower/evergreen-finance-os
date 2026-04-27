@@ -206,7 +206,6 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
 #login-card button:disabled{opacity:0.5; cursor:not-allowed}
 #login-error{color:var(--red); font-size:13px; margin-top:12px; min-height:18px}
 
-/* Botón logout en sidebar */
 #btn-logout{
   margin:8px 12px; padding:8px 12px; background:transparent; color:var(--muted);
   border:1px solid var(--border); border-radius:6px; font-size:12px; cursor:pointer;
@@ -2298,6 +2297,8 @@ const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 let _user = null;
 let _saveTimer = null;
+let _lastPush = Promise.resolve();
+let _hasUnsynced = false;
 
 function setSyncStatus(msg, cls){
   const el = document.getElementById('sync-status');
@@ -3002,11 +3003,15 @@ function saveCajas() {
     localStorage.setItem('evg_cajas_mov', JSON.stringify(CAJAS_MOV));
     localStorage.setItem('evg_cajas_nid', String(cajasNextId));
   } catch(e) { console.warn('No se pudo guardar cajas en cache local:', e); }
-  // Sync a Supabase (debounced 600ms)
+  // Sync a Supabase (debounced 250ms — agrupa saves seguidos respondiendo rápido)
   if (!_user) return;
+  _hasUnsynced = true;
   if (_saveTimer) clearTimeout(_saveTimer);
   setSyncStatus('●  Guardando…', '');
-  _saveTimer = setTimeout(()=>{ _saveTimer = null; pushCajasToCloud(); }, 600);
+  _saveTimer = setTimeout(()=>{
+    _saveTimer = null;
+    _lastPush = pushCajasToCloud();
+  }, 250);
 }
 async function pushCajasToCloud(){
   if (!_user) return;
@@ -3018,6 +3023,7 @@ async function pushCajasToCloud(){
     ];
     const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'user_id,key' });
     if (error) throw error;
+    _hasUnsynced = false;
     setSyncStatus('●  Sincronizado', 'synced');
   } catch(e){
     console.warn('Error sync Supabase:', e);
@@ -3026,15 +3032,15 @@ async function pushCajasToCloud(){
 }
 async function loadCajas() {
   // 1) Cache local primero (instantáneo)
+  let hadLocalData = false;
   try {
     const c = localStorage.getItem('evg_cajas');
     const m = localStorage.getItem('evg_cajas_mov');
     const n = localStorage.getItem('evg_cajas_nid');
-    if (c) CAJAS       = { ...CAJAS, ...JSON.parse(c) };
-    if (m) CAJAS_MOV   = JSON.parse(m);
-    if (n) cajasNextId = parseInt(n) || 1;
+    if (c) { CAJAS       = { ...CAJAS, ...JSON.parse(c) }; hadLocalData = true; }
+    if (m) { CAJAS_MOV   = JSON.parse(m); hadLocalData = true; }
+    if (n) { cajasNextId = parseInt(n) || 1; }
   } catch(e) { console.warn('No se pudo cargar cache local:', e); }
-  // 2) Si hay usuario, traer de Supabase (fuente de verdad)
   if (!_user) return;
   try {
     setSyncStatus('●  Cargando…', '');
@@ -3044,14 +3050,22 @@ async function loadCajas() {
       .eq('user_id', _user.id);
     if (error) throw error;
     if (data && data.length){
+      // Supabase tiene datos → fuente de verdad, sobrescribe local
       for (const row of data){
         if (row.key === 'evg_cajas')     CAJAS       = { ...CAJAS, ...row.value };
         if (row.key === 'evg_cajas_mov') CAJAS_MOV   = Array.isArray(row.value) ? row.value : [];
         if (row.key === 'evg_cajas_nid') cajasNextId = parseInt(row.value) || 1;
       }
       if (typeof renderCajas === 'function') renderCajas();
+      setSyncStatus('●  Sincronizado', 'synced');
+    } else if (hadLocalData) {
+      // Supabase vacío PERO hay datos en local → primer login post-migración:
+      // empujar el local al cloud para no perderlo.
+      console.info('Subiendo datos locales a Supabase (primer login post-migración)');
+      await pushCajasToCloud();
+    } else {
+      setSyncStatus('●  Sincronizado', 'synced');
     }
-    setSyncStatus('●  Sincronizado', 'synced');
   } catch(e){
     console.warn('Error load Supabase:', e);
     setSyncStatus('●  Sin conexión (modo local)', 'error');
@@ -3685,7 +3699,7 @@ async function runApp(){
   renderTxTable();
   renderEvgGF();
   renderDeudas();
-  await loadCajas(); // ahora trae de Supabase si hay sesión
+  await loadCajas();
   renderGFChacra();
   renderGFBaires();
   updateAR();
@@ -3732,12 +3746,21 @@ async function doLogin(ev){
 
 async function doLogout(){
   if (!confirm('¿Cerrar sesión?')) return;
+  // Si hay un save debounceado pendiente, dispararlo ya y esperarlo
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    _lastPush = pushCajasToCloud();
+  }
+  setSyncStatus('●  Guardando antes de salir…', '');
+  try { await _lastPush; } catch(e){}
+  // Si todavía hay cambios sin sync (error de red), advertir
+  if (_hasUnsynced) {
+    if (!confirm('⚠ Hay cambios que no se sincronizaron a la nube. Si salís ahora pueden perderse al volver desde otro dispositivo. ¿Salir igual?')) return;
+  }
   await _sb.auth.signOut();
-  try {
-    localStorage.removeItem('evg_cajas');
-    localStorage.removeItem('evg_cajas_mov');
-    localStorage.removeItem('evg_cajas_nid');
-  } catch(e){}
+  // NO borramos localStorage — Supabase ya separa por user_id, mantener cache local
+  // permite recuperar datos si por algo Supabase queda desincronizado.
   location.reload();
 }
 
@@ -3752,6 +3775,20 @@ window.addEventListener('load', async ()=>{
     }
   } catch(e){ console.warn('auth check failed', e); }
   showLogin();
+});
+
+// Avisar al usuario si intenta cerrar la pestaña con cambios sin sincronizar
+window.addEventListener('beforeunload', (ev)=>{
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    pushCajasToCloud(); // fire-and-forget — no podemos await acá
+  }
+  if (_hasUnsynced) {
+    ev.preventDefault();
+    ev.returnValue = '';
+    return '';
+  }
 });
 
 // ═══ GASTOS FIJOS PROPIEDADES ═══
@@ -4198,51 +4235,4 @@ function renderGastosPersonal() {
 
 <section id="gastos-personal" class="sec">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px">
-    <button onclick="go('dash',null)" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer">← Hub</button>
-    <div class="pg-title" style="margin:0">💸 Gastos Personales — Abril 2026</div>
-  </div>
-  <div class="pg-sub">Todos los movimientos personales del mes · desde comprobantes Prex</div>
-
-  <!-- KPIs -->
-  <div class="g g3 mt">
-    <div class="card">
-      <div class="ct">Total Gastos Personales</div>
-      <div class="cv" style="color:var(--red)" id="gp-total">—</div>
-      <div class="cs" id="gp-usd">—</div>
-    </div>
-    <div class="card">
-      <div class="ct">Movimientos</div>
-      <div class="cv-sm" id="gp-count">—</div>
-      <div class="cs">Abril 2026</div>
-    </div>
-    <div class="card">
-      <div class="ct">Mayor gasto</div>
-      <div class="cv-sm" style="color:var(--yellow)" id="gp-mayor">—</div>
-      <div class="cs" id="gp-mayor-cat">—</div>
-    </div>
-  </div>
-
-  <!-- Desglose por categoría + tabla -->
-  <div class="g g21 mt">
-    <div class="card">
-      <div class="stl">📋 Detalle de movimientos</div>
-      <table>
-        <thead><tr>
-          <th>Fecha</th>
-          <th>Destinatario</th>
-          <th>Categoría</th>
-          <th class="tr">Monto</th>
-          <th class="tr">≈ UY</th>
-        </tr></thead>
-        <tbody id="gp-tbody"></tbody>
-      </table>
-    </div>
-    <div class="card">
-      <div class="stl">📊 Por categoría</div>
-      <div id="gp-cat-breakdown" style="margin-top:8px"></div>
-    </div>
-  </div>
-</section>
-
-</body>
-</html>
+    <button onclick="go('dash',null)" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11px;
