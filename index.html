@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Evergreen Finance OS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#0b1a10; --bg2:#111f16; --card:#162b1e; --card2:#1c3526;
@@ -177,9 +178,65 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   .g4{grid-template-columns:repeat(2,1fr)}
   .g3{grid-template-columns:repeat(2,1fr)}
 }
+
+/* === LOGIN OVERLAY === */
+#login-overlay{
+  position:fixed; inset:0; background:var(--bg); z-index:9999;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+#login-overlay.hidden{display:none}
+#login-card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:32px 28px; width:100%; max-width:380px; box-shadow:0 8px 30px rgba(0,0,0,0.5);
+}
+#login-card h2{color:var(--bright); font-size:24px; margin-bottom:6px; display:flex; align-items:center; gap:10px}
+#login-card .subtitle{color:var(--text2); font-size:13px; margin-bottom:24px}
+#login-card label{display:block; color:var(--text2); font-size:12px; margin-bottom:6px; margin-top:14px; text-transform:uppercase; letter-spacing:0.5px}
+#login-card input{
+  width:100%; background:var(--bg2); border:1px solid var(--border); color:var(--text);
+  padding:11px 12px; border-radius:8px; font-size:15px; outline:none; transition:border 0.15s;
+}
+#login-card input:focus{border-color:var(--green)}
+#login-card button{
+  width:100%; margin-top:22px; background:var(--green); color:#0b1a10; border:none;
+  padding:12px; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;
+  transition:background 0.15s;
+}
+#login-card button:hover{background:var(--bright)}
+#login-card button:disabled{opacity:0.5; cursor:not-allowed}
+#login-error{color:var(--red); font-size:13px; margin-top:12px; min-height:18px}
+
+/* Botón logout en sidebar */
+#btn-logout{
+  margin:8px 12px; padding:8px 12px; background:transparent; color:var(--muted);
+  border:1px solid var(--border); border-radius:6px; font-size:12px; cursor:pointer;
+  transition:all 0.15s;
+}
+#btn-logout:hover{color:var(--red); border-color:var(--red)}
+#sync-status{
+  font-size:10px; color:var(--muted); padding:4px 12px; text-align:center;
+}
+#sync-status.synced{color:var(--green)}
+#sync-status.error{color:var(--red)}
 </style>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div id="login-card">
+    <h2>🌿 Evergreen Finance OS</h2>
+    <div class="subtitle">Ingresá para acceder a tu panel financiero</div>
+    <form id="login-form" onsubmit="return doLogin(event)">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" autocomplete="email" required>
+      <label for="login-password">Contraseña</label>
+      <input id="login-password" type="password" autocomplete="current-password" required>
+      <button type="submit" id="login-btn">Ingresar</button>
+      <div id="login-error"></div>
+    </form>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <nav id="sb">
@@ -214,6 +271,8 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div class="ni" onclick="go('deudas',this)"><span class="ni-ic">🔴</span><span>DEBE</span></div>
     <div class="ni" onclick="go('fondos',this)"><span class="ni-ic">💼</span><span>Fondo Personal</span></div>
   </nav>
+  <div id="sync-status">●  Conectando...</div>
+  <button id="btn-logout" onclick="doLogout()">🔒 Salir</button>
   <div class="sb-ft"><span class="live-dot"></span>Datos Abr 2026</div>
 </nav>
 
@@ -2231,6 +2290,22 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
 </main><!-- end main -->
 
 <script>
+// ═══════════════════════ SUPABASE CONFIG ═══════════════════════
+const SUPABASE_URL = 'https://wteyhvzwvxgbkwqcuzmk.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_KQHyIa0z0EBDpPyAd6OjjA_Y8A0c4rG';
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
+});
+let _user = null;
+let _saveTimer = null;
+
+function setSyncStatus(msg, cls){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = cls || '';
+}
+
 // ═══════════════════════ DATA ═══════════════════════
 const HIST=[
   {l:'Jul 2025',v:269164,gv:37308,s:59300,gf:116327,u:42999,usd:1024,d:8677},
@@ -2919,23 +2994,68 @@ const CAJAS_LBL = { cash_uy:'💵 Cash UY', prex_uy:'💳 Prex UY', cash_ar:'�
 let CAJAS_MOV = [];
 let cajasNextId = 1;
 
-// ── Persistencia localStorage — guarda y restaura saldos entre sesiones ──
+// ── Persistencia: localStorage como cache + Supabase como fuente de verdad ──
 function saveCajas() {
+  // Cache local inmediato (rápido, offline-friendly)
   try {
     localStorage.setItem('evg_cajas',     JSON.stringify(CAJAS));
     localStorage.setItem('evg_cajas_mov', JSON.stringify(CAJAS_MOV));
     localStorage.setItem('evg_cajas_nid', String(cajasNextId));
-  } catch(e) { console.warn('No se pudo guardar cajas:', e); }
+  } catch(e) { console.warn('No se pudo guardar cajas en cache local:', e); }
+  // Sync a Supabase (debounced 600ms)
+  if (!_user) return;
+  if (_saveTimer) clearTimeout(_saveTimer);
+  setSyncStatus('●  Guardando…', '');
+  _saveTimer = setTimeout(()=>{ _saveTimer = null; pushCajasToCloud(); }, 600);
 }
-function loadCajas() {
+async function pushCajasToCloud(){
+  if (!_user) return;
+  try {
+    const rows = [
+      { user_id: _user.id, key: 'evg_cajas',     value: CAJAS },
+      { user_id: _user.id, key: 'evg_cajas_mov', value: CAJAS_MOV },
+      { user_id: _user.id, key: 'evg_cajas_nid', value: cajasNextId }
+    ];
+    const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'user_id,key' });
+    if (error) throw error;
+    setSyncStatus('●  Sincronizado', 'synced');
+  } catch(e){
+    console.warn('Error sync Supabase:', e);
+    setSyncStatus('●  Error de sync (guardado local)', 'error');
+  }
+}
+async function loadCajas() {
+  // 1) Cache local primero (instantáneo)
   try {
     const c = localStorage.getItem('evg_cajas');
     const m = localStorage.getItem('evg_cajas_mov');
     const n = localStorage.getItem('evg_cajas_nid');
-    if (c) CAJAS       = { ...CAJAS, ...JSON.parse(c) }; // merge para mantener keys nuevas
+    if (c) CAJAS       = { ...CAJAS, ...JSON.parse(c) };
     if (m) CAJAS_MOV   = JSON.parse(m);
     if (n) cajasNextId = parseInt(n) || 1;
-  } catch(e) { console.warn('No se pudo cargar cajas:', e); }
+  } catch(e) { console.warn('No se pudo cargar cache local:', e); }
+  // 2) Si hay usuario, traer de Supabase (fuente de verdad)
+  if (!_user) return;
+  try {
+    setSyncStatus('●  Cargando…', '');
+    const { data, error } = await _sb
+      .from('app_state')
+      .select('key,value')
+      .eq('user_id', _user.id);
+    if (error) throw error;
+    if (data && data.length){
+      for (const row of data){
+        if (row.key === 'evg_cajas')     CAJAS       = { ...CAJAS, ...row.value };
+        if (row.key === 'evg_cajas_mov') CAJAS_MOV   = Array.isArray(row.value) ? row.value : [];
+        if (row.key === 'evg_cajas_nid') cajasNextId = parseInt(row.value) || 1;
+      }
+      if (typeof renderCajas === 'function') renderCajas();
+    }
+    setSyncStatus('●  Sincronizado', 'synced');
+  } catch(e){
+    console.warn('Error load Supabase:', e);
+    setSyncStatus('●  Sin conexión (modo local)', 'error');
+  }
 }
 let _cajaTarget = null; // moneda activa del formulario
 let _cajaTipo   = null; // 'ingreso' | 'egreso'
@@ -3549,26 +3669,23 @@ function updateAR() {
   if (e5) e5.textContent = 'USD ' + parseInt(gonzUSD).toLocaleString() + ' · → MercadoPago AR';
 }
 
-// ═══ INIT ═══
-window.addEventListener('load',()=>{
+// ═══ AUTH + INIT ═══
+async function runApp(){
   updateFX();
   updateConv();
   simular();
   buildRubrosBars();
   renderCharts('dash');
-  // set default date for tx form
   const txFecha = document.getElementById('tx-fecha');
   if (txFecha) txFecha.value = new Date().toISOString().split('T')[0];
-  // set default date for personal cashflow form
   const cfpFecha = document.getElementById('cfp-fecha');
   if (cfpFecha) cfpFecha.value = new Date().toISOString().split('T')[0];
-  // set default date for cajas form
   const cajaFecha = document.getElementById('caja-f-fecha');
   if (cajaFecha) cajaFecha.value = new Date().toISOString().split('T')[0];
   renderTxTable();
   renderEvgGF();
   renderDeudas();
-  loadCajas(); // restaurar saldos guardados antes de renderizar
+  await loadCajas(); // ahora trae de Supabase si hay sesión
   renderGFChacra();
   renderGFBaires();
   updateAR();
@@ -3577,7 +3694,64 @@ window.addEventListener('load',()=>{
   renderCFP();
   renderCajas();
   previewTransfer();
-  renderTxSummary(); // va último para que el KPI hub no se pise
+  renderTxSummary();
+}
+
+function showLogin(){
+  const ov = document.getElementById('login-overlay');
+  if (ov) ov.classList.remove('hidden');
+}
+function hideLogin(){
+  const ov = document.getElementById('login-overlay');
+  if (ov) ov.classList.add('hidden');
+}
+
+async function doLogin(ev){
+  ev.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const btn   = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Ingresando…';
+  try {
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    _user = data.user;
+    hideLogin();
+    document.getElementById('login-password').value = '';
+    await runApp();
+  } catch(e){
+    errEl.textContent = e.message || 'Error al ingresar';
+    btn.disabled = false;
+    btn.textContent = 'Ingresar';
+  }
+  return false;
+}
+
+async function doLogout(){
+  if (!confirm('¿Cerrar sesión?')) return;
+  await _sb.auth.signOut();
+  try {
+    localStorage.removeItem('evg_cajas');
+    localStorage.removeItem('evg_cajas_mov');
+    localStorage.removeItem('evg_cajas_nid');
+  } catch(e){}
+  location.reload();
+}
+
+window.addEventListener('load', async ()=>{
+  try {
+    const { data } = await _sb.auth.getSession();
+    if (data && data.session && data.session.user){
+      _user = data.session.user;
+      hideLogin();
+      await runApp();
+      return;
+    }
+  } catch(e){ console.warn('auth check failed', e); }
+  showLogin();
 });
 
 // ═══ GASTOS FIJOS PROPIEDADES ═══
