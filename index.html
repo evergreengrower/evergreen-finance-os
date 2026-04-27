@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Evergreen Finance OS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#0b1a10; --bg2:#111f16; --card:#162b1e; --card2:#1c3526;
@@ -178,44 +177,9 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   .g4{grid-template-columns:repeat(2,1fr)}
   .g3{grid-template-columns:repeat(2,1fr)}
 }
-
-/* === LOGIN OVERLAY === */
-#login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
-#login-overlay.hidden{display:none}
-#login-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
-#login-card h2{color:var(--bright);font-size:24px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
-#login-card .subtitle{color:var(--text2);font-size:13px;margin-bottom:24px}
-#login-card label{display:block;color:var(--text2);font-size:12px;margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:0.5px}
-#login-card input{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:11px 12px;border-radius:8px;font-size:15px;outline:none;transition:border 0.15s}
-#login-card input:focus{border-color:var(--green)}
-#login-card button{width:100%;margin-top:22px;background:var(--green);color:#0b1a10;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.15s}
-#login-card button:hover{background:var(--bright)}
-#login-card button:disabled{opacity:0.5;cursor:not-allowed}
-#login-error{color:var(--red);font-size:13px;margin-top:12px;min-height:18px}
-#btn-logout{margin:8px 12px;padding:8px 12px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;transition:all 0.15s}
-#btn-logout:hover{color:var(--red);border-color:var(--red)}
-#sync-status{font-size:10px;color:var(--muted);padding:4px 12px;text-align:center}
-#sync-status.synced{color:var(--green)}
-#sync-status.error{color:var(--red)}
 </style>
 </head>
 <body>
-
-<!-- LOGIN OVERLAY -->
-<div id="login-overlay">
-  <div id="login-card">
-    <h2>🌿 Evergreen Finance OS</h2>
-    <div class="subtitle">Ingresá para acceder a tu panel financiero</div>
-    <form id="login-form" onsubmit="return doLogin(event)">
-      <label for="login-email">Email</label>
-      <input id="login-email" type="email" autocomplete="email" required>
-      <label for="login-password">Contraseña</label>
-      <input id="login-password" type="password" autocomplete="current-password" required>
-      <button type="submit" id="login-btn">Ingresar</button>
-      <div id="login-error"></div>
-    </form>
-  </div>
-</div>
 
 <!-- SIDEBAR -->
 <nav id="sb">
@@ -250,8 +214,6 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div class="ni" onclick="go('deudas',this)"><span class="ni-ic">🔴</span><span>DEBE</span></div>
     <div class="ni" onclick="go('fondos',this)"><span class="ni-ic">💼</span><span>Fondo Personal</span></div>
   </nav>
-  <div id="sync-status">●  Conectando...</div>
-  <button id="btn-logout" onclick="doLogout()">🔒 Salir</button>
   <div class="sb-ft"><span class="live-dot"></span>Datos Abr 2026</div>
 </nav>
 
@@ -2269,24 +2231,6 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
 </main><!-- end main -->
 
 <script>
-// ═══════════════════════ SUPABASE CONFIG ═══════════════════════
-const SUPABASE_URL = 'https://wteyhvzwvxgbkwqcuzmk.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_KQHyIa0z0EBDpPyAd6OjjA_Y8A0c4rG';
-const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
-});
-let _user = null;
-let _saveTimer = null;
-let _lastPush = Promise.resolve();
-let _hasUnsynced = false;
-
-function setSyncStatus(msg, cls){
-  const el = document.getElementById('sync-status');
-  if(!el) return;
-  el.textContent = msg;
-  el.className = cls || '';
-}
-
 // ═══════════════════════ DATA ═══════════════════════
 const HIST=[
   {l:'Jul 2025',v:269164,gv:37308,s:59300,gf:116327,u:42999,usd:1024,d:8677},
@@ -2295,7 +2239,6 @@ const HIST=[
   {l:'Oct 2025',v:302800,gv:41825,s:70890,gf:113297,u:76788,usd:1828,d:9768},
   {l:'Nov 2025',v:399000,gv:45000,s:66880,gf:246800,u:28320,usd:708,d:13300},
   {l:'Mar 2026',v:250875,gv:77623,s:71880,gf:66721,u:34651,usd:888,d:9649},
-  {l:'Abr 2026',v:260555,gv:33950,s:57580,gf:66721,u:102304,usd:924,d:26},
 ];
 const RUB=[
   {n:'VAPS',v:651040,p:31.9,c:'#52b788'},
@@ -2976,69 +2919,23 @@ const CAJAS_LBL = { cash_uy:'💵 Cash UY', prex_uy:'💳 Prex UY', cash_ar:'�
 let CAJAS_MOV = [];
 let cajasNextId = 1;
 
-// ── Persistencia: localStorage como cache + Supabase como fuente de verdad ──
+// ── Persistencia localStorage — guarda y restaura saldos entre sesiones ──
 function saveCajas() {
   try {
     localStorage.setItem('evg_cajas',     JSON.stringify(CAJAS));
     localStorage.setItem('evg_cajas_mov', JSON.stringify(CAJAS_MOV));
     localStorage.setItem('evg_cajas_nid', String(cajasNextId));
-  } catch(e) { console.warn('No se pudo guardar cajas en cache local:', e); }
-  if (!_user) return;
-  _hasUnsynced = true;
-  if (_saveTimer) clearTimeout(_saveTimer);
-  setSyncStatus('●  Guardando…', '');
-  _saveTimer = setTimeout(()=>{ _saveTimer = null; _lastPush = pushCajasToCloud(); }, 250);
+  } catch(e) { console.warn('No se pudo guardar cajas:', e); }
 }
-async function pushCajasToCloud(){
-  if (!_user) return;
-  try {
-    const rows = [
-      { user_id: _user.id, key: 'evg_cajas',     value: CAJAS },
-      { user_id: _user.id, key: 'evg_cajas_mov', value: CAJAS_MOV },
-      { user_id: _user.id, key: 'evg_cajas_nid', value: cajasNextId }
-    ];
-    const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'user_id,key' });
-    if (error) throw error;
-    _hasUnsynced = false;
-    setSyncStatus('●  Sincronizado', 'synced');
-  } catch(e){
-    console.warn('Error sync Supabase:', e);
-    setSyncStatus('●  Error de sync (guardado local)', 'error');
-  }
-}
-async function loadCajas() {
-  let hadLocalData = false;
+function loadCajas() {
   try {
     const c = localStorage.getItem('evg_cajas');
     const m = localStorage.getItem('evg_cajas_mov');
     const n = localStorage.getItem('evg_cajas_nid');
-    if (c) { CAJAS = { ...CAJAS, ...JSON.parse(c) }; hadLocalData = true; }
-    if (m) { CAJAS_MOV = JSON.parse(m); hadLocalData = true; }
-    if (n) { cajasNextId = parseInt(n) || 1; }
-  } catch(e) { console.warn('No se pudo cargar cache local:', e); }
-  if (!_user) return;
-  try {
-    setSyncStatus('●  Cargando…', '');
-    const { data, error } = await _sb.from('app_state').select('key,value').eq('user_id', _user.id);
-    if (error) throw error;
-    if (data && data.length){
-      for (const row of data){
-        if (row.key === 'evg_cajas')     CAJAS = { ...CAJAS, ...row.value };
-        if (row.key === 'evg_cajas_mov') CAJAS_MOV = Array.isArray(row.value) ? row.value : [];
-        if (row.key === 'evg_cajas_nid') cajasNextId = parseInt(row.value) || 1;
-      }
-      if (typeof renderCajas === 'function') renderCajas();
-      setSyncStatus('●  Sincronizado', 'synced');
-    } else if (hadLocalData) {
-      console.info('Subiendo datos locales a Supabase (primer login post-migración)');
-      await pushCajasToCloud();
-    } else {
-      setSyncStatus('●  Sincronizado', 'synced');
-    }
-  } catch(e){
-    console.warn('Error load Supabase:', e);
-    setSyncStatus('●  Sin conexión (modo local)', 'error');
-  }
+    if (c) CAJAS       = { ...CAJAS, ...JSON.parse(c) }; // merge para mantener keys nuevas
+    if (m) CAJAS_MOV   = JSON.parse(m);
+    if (n) cajasNextId = parseInt(n) || 1;
+  } catch(e) { console.warn('No se pudo cargar cajas:', e); }
 }
 let _cajaTarget = null; // moneda activa del formulario
 let _cajaTipo   = null; // 'ingreso' | 'egreso'
@@ -3652,23 +3549,26 @@ function updateAR() {
   if (e5) e5.textContent = 'USD ' + parseInt(gonzUSD).toLocaleString() + ' · → MercadoPago AR';
 }
 
-// ═══ AUTH + INIT ═══
-async function runApp(){
+// ═══ INIT ═══
+window.addEventListener('load',()=>{
   updateFX();
   updateConv();
   simular();
   buildRubrosBars();
   renderCharts('dash');
+  // set default date for tx form
   const txFecha = document.getElementById('tx-fecha');
   if (txFecha) txFecha.value = new Date().toISOString().split('T')[0];
+  // set default date for personal cashflow form
   const cfpFecha = document.getElementById('cfp-fecha');
   if (cfpFecha) cfpFecha.value = new Date().toISOString().split('T')[0];
+  // set default date for cajas form
   const cajaFecha = document.getElementById('caja-f-fecha');
   if (cajaFecha) cajaFecha.value = new Date().toISOString().split('T')[0];
   renderTxTable();
   renderEvgGF();
   renderDeudas();
-  await loadCajas();
+  loadCajas(); // restaurar saldos guardados antes de renderizar
   renderGFChacra();
   renderGFBaires();
   updateAR();
@@ -3677,72 +3577,7 @@ async function runApp(){
   renderCFP();
   renderCajas();
   previewTransfer();
-  renderTxSummary();
-}
-function showLogin(){ const ov=document.getElementById('login-overlay'); if(ov) ov.classList.remove('hidden'); }
-function hideLogin(){ const ov=document.getElementById('login-overlay'); if(ov) ov.classList.add('hidden'); }
-async function doLogin(ev){
-  ev.preventDefault();
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-password').value;
-  const btn   = document.getElementById('login-btn');
-  const errEl = document.getElementById('login-error');
-  errEl.textContent = '';
-  btn.disabled = true;
-  btn.textContent = 'Ingresando…';
-  try {
-    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
-    if (error) throw error;
-    _user = data.user;
-    hideLogin();
-    document.getElementById('login-password').value = '';
-    await runApp();
-  } catch(e){
-    errEl.textContent = e.message || 'Error al ingresar';
-    btn.disabled = false;
-    btn.textContent = 'Ingresar';
-  }
-  return false;
-}
-async function doLogout(){
-  if (!confirm('¿Cerrar sesión?')) return;
-  if (_saveTimer) {
-    clearTimeout(_saveTimer);
-    _saveTimer = null;
-    _lastPush = pushCajasToCloud();
-  }
-  setSyncStatus('●  Guardando antes de salir…', '');
-  try { await _lastPush; } catch(e){}
-  if (_hasUnsynced) {
-    if (!confirm('⚠ Hay cambios que no se sincronizaron. ¿Salir igual?')) return;
-  }
-  await _sb.auth.signOut();
-  // NO borramos localStorage — Supabase ya separa por user_id
-  location.reload();
-}
-window.addEventListener('load', async ()=>{
-  try {
-    const { data } = await _sb.auth.getSession();
-    if (data && data.session && data.session.user){
-      _user = data.session.user;
-      hideLogin();
-      await runApp();
-      return;
-    }
-  } catch(e){ console.warn('auth check failed', e); }
-  showLogin();
-});
-window.addEventListener('beforeunload', (ev)=>{
-  if (_saveTimer) {
-    clearTimeout(_saveTimer);
-    _saveTimer = null;
-    pushCajasToCloud();
-  }
-  if (_hasUnsynced) {
-    ev.preventDefault();
-    ev.returnValue = '';
-    return '';
-  }
+  renderTxSummary(); // va último para que el KPI hub no se pise
 });
 
 // ═══ GASTOS FIJOS PROPIEDADES ═══
@@ -3801,34 +3636,34 @@ const TOP_PRODUCTS = [
 ];
 
 // acum:true = lunes o primer día hábil con liquidación acumulada de fin de semana/feriado
-// Datos REALES Abril 2026 (CAJAS DIARIAS para montos + VENTAS DIARIAS para meta)
+// Los grandes montos de tarjeta en esos días representan Vie+Sáb+Dom juntos
 const VENTAS_DIARIAS = [
-  { fecha:'2026-04-01', efectivo:  5400, tarjeta:  2040, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-02', efectivo:  7350, tarjeta: 11170, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-03', efectivo: 13390, tarjeta: 19260, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-04', efectivo:  2970, tarjeta: 14120, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-05', efectivo:  5310, tarjeta:  6700, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
-  { fecha:'2026-04-06', efectivo:  1470, tarjeta:  6350, turnos:'mañana', colabs:'MACA' },
-  { fecha:'2026-04-07', efectivo:  4310, tarjeta:     0, turnos:'mañana,tarde', colabs:'MACA,SARAHI' },
-  { fecha:'2026-04-08', efectivo:  2560, tarjeta:  3810, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
-  { fecha:'2026-04-09', efectivo:  3040, tarjeta:  3300, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
-  { fecha:'2026-04-10', efectivo:  7800, tarjeta:  5400, turnos:'mañana,tarde', colabs:'JULY,MAIK,SARAHI' },
-  { fecha:'2026-04-11', efectivo:  2710, tarjeta:  4180, turnos:'mañana,tarde', colabs:'JULY,MAIK,SARAHI' },
-  { fecha:'2026-04-12', efectivo:  5400, tarjeta:  8370, turnos:'mañana,tarde', colabs:'JULY,MAIK,SARAHI' },
-  { fecha:'2026-04-13', efectivo:  1740, tarjeta:  2380, turnos:'mañana', colabs:'MACA' },
-  { fecha:'2026-04-14', efectivo:  1290, tarjeta:  5330, turnos:'mañana,tarde', colabs:'JULY,MACA,SARAHI' },
-  { fecha:'2026-04-15', efectivo:  1790, tarjeta:  5460, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-16', efectivo:  1840, tarjeta:  1940, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-17', efectivo:  1620, tarjeta:  8875, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-18', efectivo:  4550, tarjeta:  5710, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-19', efectivo:  2650, tarjeta:  7290, turnos:'mañana,tarde', colabs:'MAIK,SARAHI' },
-  { fecha:'2026-04-20', efectivo:   830, tarjeta:  4900, turnos:'mañana', colabs:'MACA' },
-  { fecha:'2026-04-21', efectivo:  4840, tarjeta:  5280, turnos:'mañana,tarde', colabs:'MACA,SARAHI' },
-  { fecha:'2026-04-22', efectivo:   710, tarjeta: 16470, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-23', efectivo:  1230, tarjeta:  5720, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-24', efectivo:  2390, tarjeta:  2700, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-25', efectivo:   810, tarjeta:  2380, turnos:'mañana,tarde', colabs:'MACA,MAIK' },
-  { fecha:'2026-04-26', efectivo:  3160, tarjeta: 10260, turnos:'mañana,tarde', colabs:'MACA,MAIK,SARAHI' },
+  { fecha:'2026-04-01', efectivo:4200, tarjeta:0     },
+  { fecha:'2026-04-02', efectivo:5100, tarjeta:0     },
+  { fecha:'2026-04-03', efectivo:6800, tarjeta:0     },
+  { fecha:'2026-04-04', efectivo:4500, tarjeta:0     },
+  { fecha:'2026-04-05', efectivo:5900, tarjeta:0     },
+  { fecha:'2026-04-06', efectivo:3200, tarjeta:55220, acum:true, acumDias:'Vie 3 + Sáb 4 + Dom 5 + Lun 6' },
+  { fecha:'2026-04-07', efectivo:4800, tarjeta:2287  },
+  { fecha:'2026-04-08', efectivo:6200, tarjeta:1714  },
+  { fecha:'2026-04-09', efectivo:5400, tarjeta:3547  },
+  { fecha:'2026-04-10', efectivo:4100, tarjeta:4832  },
+  { fecha:'2026-04-11', efectivo:7200, tarjeta:0     },
+  { fecha:'2026-04-12', efectivo:3800, tarjeta:0     },
+  { fecha:'2026-04-13', efectivo:5600, tarjeta:15039, acum:true, acumDias:'Sáb 11 + Dom 12 + Lun 13' },
+  { fecha:'2026-04-14', efectivo:4900, tarjeta:0     },
+  { fecha:'2026-04-15', efectivo:6100, tarjeta:0     },
+  { fecha:'2026-04-16', efectivo:5300, tarjeta:0     },
+  { fecha:'2026-04-17', efectivo:4700, tarjeta:4574  },
+  { fecha:'2026-04-18', efectivo:3900, tarjeta:0     },
+  { fecha:'2026-04-19', efectivo:5200, tarjeta:0     },
+  { fecha:'2026-04-20', efectivo:4600, tarjeta:0     },
+  { fecha:'2026-04-21', efectivo:6800, tarjeta:0     },
+  { fecha:'2026-04-22', efectivo:5100, tarjeta:8532  },
+  { fecha:'2026-04-23', efectivo:4400, tarjeta:7521  },
+  { fecha:'2026-04-24', efectivo:5800, tarjeta:16140 },
+  { fecha:'2026-04-25', efectivo:3600, tarjeta:0     },
+  { fecha:'2026-04-26', efectivo:4875, tarjeta:0     },
 ];
 
 let _evSubActivo = null;
@@ -3914,16 +3749,8 @@ function showEvSub(tipo, card) {
             <tbody>${VENTAS_DIARIAS.map(d=>{
               const tot=d.efectivo+d.tarjeta;
               const acumBadge = d.acum ? `<span title="${d.acumDias}" style="font-size:9px;background:rgba(246,173,85,.2);color:var(--yellow);border-radius:4px;padding:1px 4px;margin-left:4px">📦 ${d.acumDias}</span>` : '';
-              let turnosBadge = '';
-              if (d.turnos) {
-                const tt = d.turnos.toLowerCase();
-                const m  = (tt.includes('mañana')||tt.includes('manana')) ? '☀️' : '';
-                const a  = tt.includes('tarde') ? '🌙' : '';
-                if (m||a) turnosBadge = `<span style="font-size:10px;margin-left:5px;opacity:.85">${m}${a}</span>`;
-              }
-              const colabsTip = d.colabs ? ` title="Colabs: ${d.colabs}"` : '';
-              return `<tr${colabsTip} style="${d.acum?'background:rgba(246,173,85,.05)':''}">
-                <td style="font-size:11px">${d.fecha.slice(5)}${turnosBadge}${acumBadge}</td>
+              return `<tr style="${d.acum?'background:rgba(246,173,85,.05)':''}">
+                <td style="font-size:11px">${d.fecha.slice(5)}${acumBadge}</td>
                 <td class="tr mono" style="color:var(--green)">${d.efectivo>0?fUY(d.efectivo):'—'}</td>
                 <td class="tr mono" style="color:${d.acum?'var(--yellow)':'var(--blue)'}">${d.tarjeta>0?fUY(d.tarjeta):'—'}</td>
                 <td class="tr mono" style="font-weight:700">${fUY(tot)}</td>
