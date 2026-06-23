@@ -926,6 +926,16 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     </div>
   </div>
 
+  <!-- ── GASTOS FIJOS PAGOS DEL MES ── -->
+  <div class="card mt" style="border-color:rgba(82,183,136,.35)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="stl" style="margin:0">✅ Gastos Fijos Pagos del Mes</div>
+      <button onclick="loadGfPagos()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">↻ Actualizar</button>
+    </div>
+    <div id="gf-pagos-mes" style="font-size:12px;color:var(--muted)">—</div>
+  </div>
+
+
 <!-- ══════════════════════════════════════════════════════════════════════
      🏷️ BASE PRODUCTOS — Catálogo permanente al final de Evergreen Culture
 ══════════════════════════════════════════════════════════════════════ -->
@@ -2732,6 +2742,7 @@ function go(id,el){
   if(id==='posnet') renderPosnet();
   if(id==='evergreen' && typeof renderProductosInline === 'function') renderProductosInline(false);
   if(id==='evergreen') renderEvergreenKPI();
+  if(id==='evergreen') loadGfPagos();
   if(id==='facturas') facturasInit();
   setTimeout(()=>renderCharts(id),60);
 }
@@ -3777,6 +3788,46 @@ let EVG_GF = [
 ];
 let evgGfNextId = 16;
 
+let _gfPagos = {};
+function _gfPeriodo(){
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  return hoy.slice(0,7);
+}
+async function loadGfPagos(){
+  try{
+    const {data}=await _sb.from('gastos_fijos_pagos').select('*').eq('periodo',_gfPeriodo());
+    _gfPagos={}; (data||[]).forEach(r=>{ _gfPagos[r.concepto]=r; });
+  }catch(e){}
+  if(typeof renderEvgGF==='function') renderEvgGF();
+  renderGfPagosMes();
+}
+async function toggleGfPago(concepto, prov, monto, moneda){
+  const ex=_gfPagos[concepto];
+  try{
+    if(ex){ const {error}=await _sb.from('gastos_fijos_pagos').delete().eq('id',ex.id); if(error) throw error; }
+    else {
+      const muy = moneda==='USD'? monto*FX.usd : moneda==='ARS'? monto/FX.ars*FX.usd : monto;
+      const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+      const {error}=await _sb.from('gastos_fijos_pagos').insert({concepto, proveedor:(prov&&prov!=='—')?prov:null, monto, moneda, monto_uy:Math.round(muy), periodo:_gfPeriodo(), fecha_pago:hoy, metodo:'manual', source:'app'});
+      if(error) throw error;
+    }
+    await loadGfPagos();
+  }catch(e){ alert('No se pudo actualizar: '+(e.message||e)); }
+}
+function renderGfPagosMes(){
+  const el=document.getElementById('gf-pagos-mes'); if(!el) return;
+  const rows=Object.values(_gfPagos);
+  const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
+  const fv=(m,mon)=> mon==='USD'?'USD '+Math.round(m).toLocaleString():mon==='ARS'?'$'+Math.round(m).toLocaleString('es-UY')+' ARS':'$'+Math.round(m).toLocaleString('es-UY')+' UY';
+  const tot=rows.reduce((a,r)=>a+(+r.monto_uy||0),0);
+  let html='<div style="color:var(--green);font-weight:700;margin-bottom:8px">Total pagado este mes: '+f(tot)+' UY ('+rows.length+' gastos)</div>';
+  if(rows.length){
+    html+='<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Concepto</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Pagado</th><th style="text-align:right;padding:3px 6px">Monto</th></tr></thead><tbody>';
+    html+=rows.sort((a,b)=>(a.fecha_pago||'').localeCompare(b.fecha_pago||'')).map(r=>'<tr><td style="padding:3px 6px;font-weight:600">'+(r.concepto||'-')+'</td><td style="padding:3px 6px;color:var(--muted)">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px;color:var(--muted)">'+(r.fecha_pago||'-')+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+fv(r.monto,r.moneda)+'</td></tr>').join('');
+    html+='</tbody></table></div>';
+  } else { html+='<div style="color:var(--muted)">Todavía no marcaste ningún gasto fijo como pagado este mes.</div>'; }
+  el.innerHTML=html;
+}
 function renderEvgGF() {
   const tbody = document.getElementById('evg-gf-tbody');
   if (!tbody) return;
@@ -3796,7 +3847,8 @@ function renderEvgGF() {
       <td class="tr mono" style="color:var(--red);font-weight:700">${fv(r.monto, r.moneda)}</td>
       <td><span class="badge" style="background:var(--card2);color:var(--text2);font-size:10px">${r.moneda}</span></td>
       <td style="font-size:11px;color:var(--muted)">${r.cat}</td>
-      <td style="text-align:center">
+      <td style="text-align:center;white-space:nowrap">
+        ${ _gfPagos[r.concepto] ? `<button onclick="toggleGfPago('${(r.concepto||'').replace(/'/g,'')}','${(r.prov||'').replace(/'/g,'')}',${r.monto},'${r.moneda}')" style="background:rgba(82,183,136,.2);color:var(--green);border:1px solid rgba(82,183,136,.5);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:6px" title="Pagado — clic para desmarcar">✅ Pagado</button>` : `<button onclick="toggleGfPago('${(r.concepto||'').replace(/'/g,'')}','${(r.prov||'').replace(/'/g,'')}',${r.monto},'${r.moneda}')" style="background:var(--card2);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:6px" title="Marcar como pagado este mes">Marcar pagado</button>` }
         <button onclick="editEvgGF(${r.id})" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:13px;margin-right:4px" title="Editar">✏️</button>
         <button onclick="deleteEvgGF(${r.id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px" title="Eliminar">🗑</button>
       </td>
