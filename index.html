@@ -5882,38 +5882,45 @@ function showEvSub(tipo, card) {
   const colors = ['#52b788','#63b3ed','#f6ad55','#ef476f','#c77dff','#00b478','#ffd166','#06d6a0'];
 
   if (tipo === 'ventas') {
-    const totalTarjeta = VENTAS_DIARIAS.reduce((a,d)=>a+d.tarjeta,0);
-    const totalEfectivo = VENTAS_DIARIAS.reduce((a,d)=>a+d.efectivo,0);
-    const total = totalTarjeta + totalEfectivo;
-    const diasConVenta = VENTAS_DIARIAS.filter(d=>d.efectivo+d.tarjeta>0).length;
-    const pctTarjeta = (totalTarjeta/total*100).toFixed(1);
-    const pctEfectivo = (totalEfectivo/total*100).toFixed(1);
-
+    const mesLabel = (window.LIVE&&window.LIVE.meta&&window.LIVE.meta.mesLabel)||'mes actual';
     content.innerHTML = `
       <div class="card" style="border-color:rgba(82,183,136,.4)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="stl" style="margin:0">📈 Detalle de Ventas — Abril 2026</div>
+          <div class="stl" style="margin:0">📈 Detalle de Ventas — ${mesLabel}</div>
           <button onclick="showEvSub('ventas',null)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">×</button>
         </div>
+        <div id="ev-ventas-loading" style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ Cargando ventas de la caja diaria...</div>
+        <div id="ev-ventas-content" style="display:none"></div>
+      </div>`;
+    panel.style.display = 'block';
+    (async () => {
+      const hoy=new Date(); const yyyy=hoy.getFullYear(); const mm=String(hoy.getMonth()+1).padStart(2,'0');
+      const monthStart=`${yyyy}-${mm}-01`;
+      const nm=new Date(yyyy,hoy.getMonth()+1,1); const nextMonthStart=`${nm.getFullYear()}-${String(nm.getMonth()+1).padStart(2,'0')}-01`;
+      let cf=[]; try{ const {data}=await _sb.from('daily_cashflow').select('fecha,turno,colab,efectivo,tarjeta').gte('fecha',monthStart).lt('fecha',nextMonthStart).order('fecha',{ascending:true}).order('turno',{ascending:true}).limit(2000); cf=data||[]; }catch(e){ console.warn('ventas cf err',e); }
+      const VD=cf.map(r=>({fecha:r.fecha, efectivo:+r.efectivo||0, tarjeta:+r.tarjeta||0, turnos:r.turno||'', colabs:r.colab||''}));
+      let ds=[]; try{ const {data}=await _sb.from('daily_sales').select('producto,total').gte('fecha',monthStart).lt('fecha',nextMonthStart).limit(8000); ds=data||[]; }catch(e){}
+      const byP={}; ds.forEach(r=>{ const n=((r.producto||'—').trim())||'—'; byP[n]=(byP[n]||0)+(+r.total||0); });
+      const totP=Object.values(byP).reduce((a,b)=>a+b,0)||1;
+      const TP=Object.entries(byP).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([nombre,monto])=>({nombre,monto,pct:+(monto/totP*100).toFixed(1)}));
+      const totalTarjeta=VD.reduce((a,d)=>a+d.tarjeta,0);
+      const totalEfectivo=VD.reduce((a,d)=>a+d.efectivo,0);
+      const total=totalTarjeta+totalEfectivo;
+      const dias=[...new Set(VD.filter(d=>d.efectivo+d.tarjeta>0).map(d=>d.fecha))].length;
+      const pctTarjeta=total?(totalTarjeta/total*100).toFixed(1):'0';
+      const pctEfectivo=total?(totalEfectivo/total*100).toFixed(1):'0';
+      const byDay={}; VD.forEach(d=>{ if(!byDay[d.fecha])byDay[d.fecha]={ef:0,ta:0}; byDay[d.fecha].ef+=d.efectivo; byDay[d.fecha].ta+=d.tarjeta; });
+      const dayKeys=Object.keys(byDay).sort();
+      const load=document.getElementById('ev-ventas-loading'); const cont=document.getElementById('ev-ventas-content');
+      if(load) load.style.display='none';
+      if(!cont) return;
+      cont.style.display='block';
+      cont.innerHTML = `
         <div class="g g4" style="margin-bottom:16px">
-          <div class="card2" style="text-align:center">
-            <div style="font-size:11px;color:var(--muted)">Total Ventas</div>
-            <div style="font-size:20px;font-weight:800;color:var(--bright)">${fUY(total)}</div>
-          </div>
-          <div class="card2" style="text-align:center">
-            <div style="font-size:11px;color:var(--muted)">💵 Efectivo</div>
-            <div style="font-size:18px;font-weight:800;color:var(--green)">${fUY(totalEfectivo)}</div>
-            <div style="font-size:10px;color:var(--muted)">${pctEfectivo}% del total</div>
-          </div>
-          <div class="card2" style="text-align:center">
-            <div style="font-size:11px;color:var(--muted)">💳 Tarjeta (Handy)</div>
-            <div style="font-size:18px;font-weight:800;color:var(--blue)">${fUY(totalTarjeta)}</div>
-            <div style="font-size:10px;color:var(--muted)">${pctTarjeta}% del total</div>
-          </div>
-          <div class="card2" style="text-align:center">
-            <div style="font-size:11px;color:var(--muted)">Días activos</div>
-            <div style="font-size:20px;font-weight:800;color:var(--yellow)">${diasConVenta}</div>
-          </div>
+          <div class="card2" style="text-align:center"><div style="font-size:11px;color:var(--muted)">Total Ventas</div><div style="font-size:20px;font-weight:800;color:var(--bright)">${fUY(total)}</div></div>
+          <div class="card2" style="text-align:center"><div style="font-size:11px;color:var(--muted)">💵 Efectivo</div><div style="font-size:18px;font-weight:800;color:var(--green)">${fUY(totalEfectivo)}</div><div style="font-size:10px;color:var(--muted)">${pctEfectivo}% del total</div></div>
+          <div class="card2" style="text-align:center"><div style="font-size:11px;color:var(--muted)">💳 Tarjeta (Handy)</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${fUY(totalTarjeta)}</div><div style="font-size:10px;color:var(--muted)">${pctTarjeta}% del total</div></div>
+          <div class="card2" style="text-align:center"><div style="font-size:11px;color:var(--muted)">Días activos</div><div style="font-size:20px;font-weight:800;color:var(--yellow)">${dias}</div></div>
         </div>
         <div class="g g21" style="gap:16px">
           <div>
@@ -5921,19 +5928,17 @@ function showEvSub(tipo, card) {
             <div class="ch-wrap" style="height:200px"><canvas id="c-ev-ventas-daily"></canvas></div>
           </div>
           <div>
-            <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">🥇 Top Productos — Abril 2026</div>
-            ${TOP_PRODUCTS.map((p,i)=>`
+            <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">🥇 Top Productos — ${mesLabel}</div>
+            ${TP.length?TP.map((pp,i)=>`
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                 <div style="font-size:11px;color:var(--muted);min-width:14px">${i+1}</div>
                 <div style="flex:1">
-                  <div style="font-size:12px;font-weight:600">${p.nombre}</div>
-                  <div style="height:4px;background:var(--border);border-radius:2px;margin-top:3px">
-                    <div style="height:100%;width:${p.pct}%;background:${colors[i]};border-radius:2px"></div>
-                  </div>
+                  <div style="font-size:12px;font-weight:600">${pp.nombre}</div>
+                  <div style="height:4px;background:var(--border);border-radius:2px;margin-top:3px"><div style="height:100%;width:${pp.pct}%;background:${colors[i%colors.length]};border-radius:2px"></div></div>
                 </div>
-                <div style="font-size:11px;color:${colors[i]};font-weight:700;min-width:65px;text-align:right">${fUY(p.monto)}</div>
-                <div style="font-size:10px;color:var(--muted);min-width:34px;text-align:right">${p.pct}%</div>
-              </div>`).join('')}
+                <div style="font-size:11px;color:${colors[i%colors.length]};font-weight:700;min-width:65px;text-align:right">${fUY(pp.monto)}</div>
+                <div style="font-size:10px;color:var(--muted);min-width:34px;text-align:right">${pp.pct}%</div>
+              </div>`).join(''):'<div style="font-size:12px;color:var(--muted)">Sin ventas por producto cargadas este mes.</div>'}
             <div class="ch-wrap" style="height:140px;margin-top:10px"><canvas id="c-ev-productos-pie"></canvas></div>
           </div>
         </div>
@@ -5941,45 +5946,29 @@ function showEvSub(tipo, card) {
           <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">📋 Detalle Cajas Diarias</div>
           <table>
             <thead><tr><th>Fecha</th><th>Turno</th><th>Colab</th><th class="tr">Efectivo</th><th class="tr">Tarjeta</th><th class="tr">Total día</th></tr></thead>
-            <tbody>${VENTAS_DIARIAS.map(d=>{
+            <tbody>${VD.length?VD.map(d=>{
               const tot=d.efectivo+d.tarjeta;
-              const acumBadge = d.acum ? `<span title="${d.acumDias}" style="font-size:9px;background:rgba(246,173,85,.2);color:var(--yellow);border-radius:4px;padding:1px 4px;margin-left:4px">📦 ${d.acumDias}</span>` : '';
-              let turnosBadge = '';
-              if (d.turnos) {
-                const tt = d.turnos.toLowerCase();
-                const m  = (tt.includes('mañana')||tt.includes('manana')) ? '☀️' : '';
-                const a  = tt.includes('tarde') ? '🌙' : '';
-                if (m||a) turnosBadge = `<span style="font-size:10px;margin-left:5px;opacity:.85">${m}${a}</span>`;
-              }
-              const colabsTip = d.colabs ? ` title="Colabs: ${d.colabs}"` : '';
-              const turnoText = d.turnos ? d.turnos.replace(/,/g, ' + ') : '—';
-              const colabText = d.colabs ? d.colabs.replace(/,/g, ', ') : '—';
-              return `<tr style="${d.acum?'background:rgba(246,173,85,.05)':''}">
-                <td style="font-size:11px">${d.fecha.slice(5)}${turnosBadge}${acumBadge}</td>
-                <td style="font-size:10px;color:var(--text2)">${turnoText}</td>
-                <td style="font-size:10px;color:var(--muted)">${colabText}</td>
-                <td class="tr mono" style="color:var(--green)">${d.efectivo>0?fUY(d.efectivo):'—'}</td>
-                <td class="tr mono" style="color:${d.acum?'var(--yellow)':'var(--blue)'}">${d.tarjeta>0?fUY(d.tarjeta):'—'}</td>
-                <td class="tr mono" style="font-weight:700">${fUY(tot)}</td>
-              </tr>`;
-            }).join('')}</tbody>
+              const tt=(d.turnos||'').toLowerCase();
+              const m=(tt.includes('mañana')||tt.includes('manana'))?'☀️':''; const a=tt.includes('tarde')?'🌙':'';
+              const turnosBadge=(m||a)?`<span style="font-size:10px;margin-left:5px;opacity:.85">${m}${a}</span>`:'';
+              const turnoText=d.turnos?d.turnos.replace(/,/g,' + '):'—';
+              const colabText=d.colabs?d.colabs.replace(/,/g,', '):'—';
+              return `<tr><td style="font-size:11px">${d.fecha.slice(5)}${turnosBadge}</td><td style="font-size:10px;color:var(--text2)">${turnoText}</td><td style="font-size:10px;color:var(--muted)">${colabText}</td><td class="tr mono" style="color:var(--green)">${d.efectivo>0?fUY(d.efectivo):'—'}</td><td class="tr mono" style="color:var(--blue)">${d.tarjeta>0?fUY(d.tarjeta):'—'}</td><td class="tr mono" style="font-weight:700">${fUY(tot)}</td></tr>`;
+            }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin cajas cargadas este mes.</td></tr>'}</tbody>
           </table>
-        </div>
-      </div>`;
-    panel.style.display = 'block';
-    setTimeout(() => {
-      const tc='#a0aec0', gc='rgba(255,255,255,.06)';
-      mk('c-ev-ventas-daily',{type:'bar',data:{
-        labels: VENTAS_DIARIAS.map(d=>d.fecha.slice(5)),
-        datasets:[
-          {label:'Efectivo',data:VENTAS_DIARIAS.map(d=>d.efectivo),backgroundColor:'rgba(82,183,136,.7)',borderRadius:3},
-          {label:'Tarjeta',data:VENTAS_DIARIAS.map(d=>d.tarjeta),backgroundColor:'rgba(99,179,237,.7)',borderRadius:3}
-        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc,font:{size:10}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{color:tc,font:{size:9}}},y:{stacked:true,grid:{color:gc},ticks:{color:tc,callback:v=>'$'+v.toLocaleString('es-UY')}}}}});
-      mk('c-ev-productos-pie',{type:'doughnut',data:{
-        labels:TOP_PRODUCTS.map(p=>p.nombre),
-        datasets:[{data:TOP_PRODUCTS.map(p=>p.monto),backgroundColor:colors,borderWidth:0}]
-      },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}});
-    },80);
+        </div>`;
+      setTimeout(()=>{
+        const tc='#a0aec0', gc='rgba(255,255,255,.06)';
+        mk('c-ev-ventas-daily',{type:'bar',data:{
+          labels:dayKeys.map(k=>k.slice(5)),
+          datasets:[
+            {label:'Efectivo',data:dayKeys.map(k=>byDay[k].ef),backgroundColor:'rgba(82,183,136,.7)',borderRadius:3},
+            {label:'Tarjeta',data:dayKeys.map(k=>byDay[k].ta),backgroundColor:'rgba(99,179,237,.7)',borderRadius:3}
+          ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc,font:{size:10}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{color:tc,font:{size:9}}},y:{stacked:true,grid:{color:gc},ticks:{color:tc,callback:v=>'$'+v.toLocaleString('es-UY')}}}}});
+        if(TP.length) mk('c-ev-productos-pie',{type:'doughnut',data:{labels:TP.map(pp=>pp.nombre),datasets:[{data:TP.map(pp=>pp.monto),backgroundColor:colors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}});
+      },80);
+    })();
+    return;
 
   } else if (tipo === 'ventasItems') {
     renderVentasItemsPanel(content, fUY);
