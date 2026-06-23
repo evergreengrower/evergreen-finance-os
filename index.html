@@ -649,7 +649,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <div><label class="cg-l">Colaborador</label><input type="text" id="cv-colab" class="cg-i" placeholder="Nombre"></div>
     </div>
     <div class="g g2" style="gap:10px;margin-top:10px">
-      <div><label class="cg-l">Producto</label><input type="text" id="cv-producto" class="cg-i" list="cv-prod-list" oninput="cargaAutofill()" placeholder="Buscá o escribí"><datalist id="cv-prod-list"></datalist></div>
+      <div style="position:relative"><label class="cg-l">Producto</label><input type="text" id="cv-producto" class="cg-i" autocomplete="off" oninput="cvProdSearch()" onfocus="cvProdSearch()" onblur="setTimeout(function(){var d=document.getElementById('cv-prod-drop');if(d)d.style.display='none';},200)" placeholder="Buscá o escribí (catálogo completo)"><div id="cv-prod-drop" style="display:none;position:absolute;left:0;right:0;z-index:60;background:var(--card);border:1px solid var(--border);border-radius:8px;max-height:250px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.45)"></div></div>
       <div><label class="cg-l">Rubro</label><input type="text" id="cv-rubro" class="cg-i" placeholder="Rubro"></div>
     </div>
     <div class="g g4" style="gap:10px;margin-top:10px">
@@ -4642,6 +4642,27 @@ function cargaInjectCSS(){
   s.textContent='.cg-l{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}.cg-i{width:100%;padding:9px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:14px;box-sizing:border-box}.cg-i:focus{border-color:var(--green);outline:none}';
   document.head.appendChild(s);
 }
+function cvProdSearch(){
+  const inp=document.getElementById('cv-producto'); const drop=document.getElementById('cv-prod-drop');
+  if(!inp||!drop) return;
+  const q=inp.value.trim().toLowerCase();
+  let list=(_prod_cache||[]);
+  if(q) list=list.filter(p=>String(p.nombre||'').toLowerCase().includes(q));
+  list=list.slice(0,300);
+  if(!list.length){ drop.innerHTML='<div style="padding:8px 10px;font-size:12px;color:var(--muted)">Sin coincidencias</div>'; drop.style.display='block'; return; }
+  drop.innerHTML=list.map(p=>{
+    const nom=String(p.nombre||'').replace(/"/g,'&quot;');
+    const extra=(p.rubro?String(p.rubro):'')+(p.precio_venta?(' · $'+Math.round(p.precio_venta)):'');
+    return '<div onmousedown="cvProdPick(this)" data-nom="'+nom+'" style="padding:7px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)"><span style="font-weight:600">'+nom+'</span> <span style="font-size:10px;color:var(--muted)">'+extra+'</span></div>';
+  }).join('');
+  drop.style.display='block';
+}
+function cvProdPick(el){
+  const inp=document.getElementById('cv-producto'); const drop=document.getElementById('cv-prod-drop');
+  if(inp) inp.value=el.getAttribute('data-nom');
+  if(drop) drop.style.display='none';
+  if(typeof cargaAutofill==='function') cargaAutofill();
+}
 async function cargaInit(){
   cargaInjectCSS();
   const t=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
@@ -4649,7 +4670,7 @@ async function cargaInit(){
   const _cc=document.getElementById('cv-colab'); if(_cc&&window._staffName){ _cc.value=window._staffName; _cc.readOnly=true; }
   const _cj=document.getElementById('cj-colab'); if(_cj&&window._staffName){ _cj.value=window._staffName; _cj.readOnly=true; }
   try{
-    try{ if(typeof fetchProductos==='function'){ await fetchProductos(); } }catch(e){}
+    try{ _prod_cache=null; if(typeof fetchProductos==='function'){ await fetchProductos(); } }catch(e){}
     const dl=document.getElementById('cv-prod-list');
     if(dl&&_prod_cache) dl.innerHTML=_prod_cache.map(p=>'<option value="'+String(p.nombre||'').replace(/"/g,'')+'">').join('');
     const _rubros=[...new Set((_prod_cache||[]).map(p=>String(p.rubro||'').trim()).filter(Boolean))].sort();
