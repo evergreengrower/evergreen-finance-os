@@ -361,6 +361,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <nav>
     <div class="nl">Operación</div>
     <div class="ni" id="ni-carga" onclick="go('carga',this)"><span class="ni-ic">📝</span><span>Carga Diaria</span></div>
+    <div class="ni" id="ni-facturas" onclick="go('facturas',this)"><span class="ni-ic">🧾</span><span>Facturas</span></div>
     <div class="nl">Inicio</div>
     <div class="ni on" onclick="go('dash',this)"><span class="ni-ic">🏠</span><span>Hub Ecosystem</span></div>
     <div class="nl">Negocios</div>
@@ -702,6 +703,41 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <button onclick="renderCargaHoy()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">↻ Actualizar</button>
     </div>
     <div id="carga-hoy" style="font-size:12px;color:var(--muted)">—</div>
+  </div>
+</section>
+
+<!-- ═══════════════ MÓDULO FACTURAS / CUENTAS POR PAGAR ═══════════════ -->
+<section id="facturas" class="sec">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div class="pg-title" style="margin:0">🧾 Facturas / Cuentas por Pagar</div>
+    <button onclick="goBack()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap">← Atrás</button>
+  </div>
+  <div class="pg-sub">Cargá las facturas a pagar — se marcan como pagadas y van a Pago Prex al registrar el pago</div>
+
+  <div class="card" style="border-color:rgba(255,209,102,.5);max-width:820px;margin-top:14px">
+    <div class="stl" style="margin-bottom:6px">Nueva factura a pagar</div>
+    <div class="g g4" style="gap:10px">
+      <div><label class="cg-l">Fecha</label><input type="date" id="fc-fecha" class="cg-i"></div>
+      <div><label class="cg-l">Proveedor</label><input type="text" id="fc-prov" class="cg-i" placeholder="Proveedor"></div>
+      <div><label class="cg-l">Vencimiento</label><input type="date" id="fc-venc" class="cg-i"></div>
+      <div><label class="cg-l">Monto $</label><input type="number" id="fc-monto" class="cg-i" min="0" step="1" style="font-weight:700"></div>
+    </div>
+    <div style="margin-top:10px"><label class="cg-l">Detalle / artículos</label><textarea id="fc-detalle" class="cg-i" rows="2" placeholder="Qué incluye la factura"></textarea></div>
+    <button onclick="guardarFactura()" id="fc-btn" style="margin-top:16px;width:100%;padding:12px;background:var(--yellow);color:#1a1505;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">＋ Guardar factura</button>
+    <div id="fc-msg" style="margin-top:10px;font-size:13px;min-height:18px"></div>
+  </div>
+
+  <div class="card" style="max-width:960px;margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="stl" style="margin:0">⏳ Pendientes de pago</div>
+      <button onclick="renderFacturas()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">↻ Actualizar</button>
+    </div>
+    <div id="fc-pendientes" style="font-size:12px;color:var(--muted)">—</div>
+  </div>
+
+  <div class="card" style="max-width:960px;margin-top:16px">
+    <div class="stl">✅ Pagadas (últimas)</div>
+    <div id="fc-pagadas" style="font-size:12px;color:var(--muted)">—</div>
   </div>
 </section>
 
@@ -2670,7 +2706,7 @@ function updateKPIs(){
 }
 
 // ═══ NAV ═══
-const titles={'carga':'📝 Carga Diaria','dash':'🌿 Evergreen Ecosystem — Hub','evergreen':'🌿 Evergreen Culture','medplant':'🏥 Medplant','ong':'🤝 BA Evergreen ONG','farm':'🌱 Evergreen Farm ARG','cashflow':'💰 Cash Flow','prex':'💳 Caja Prex','gastfijos':'🏠 Gastos Fijos Personales','paises':'Finanzas por País','monedas':'Monedas y Conversión','ingresos':'Análisis de Ingresos','gastos':'Análisis de Gastos','rentabilidad':'Rentabilidad','proyecciones':'Proyecciones','ia':'🤖 Análisis IA','marketing':'📣 Estrategia de Marketing','alertas':'Centro de Alertas','transferencias':'Transferencias & Categorización','deudas':'🔴 Deudas & Obligaciones','posnet':'💳 Ingresos Posnet Evergreen','fondos':'💼 Fondo Personal — Estudio Jurídico','gastos-personal':'💸 Gastos Personales'};
+const titles={'carga':'📝 Carga Diaria','facturas':'🧾 Facturas / Cuentas por Pagar','dash':'🌿 Evergreen Ecosystem — Hub','evergreen':'🌿 Evergreen Culture','medplant':'🏥 Medplant','ong':'🤝 BA Evergreen ONG','farm':'🌱 Evergreen Farm ARG','cashflow':'💰 Cash Flow','prex':'💳 Caja Prex','gastfijos':'🏠 Gastos Fijos Personales','paises':'Finanzas por País','monedas':'Monedas y Conversión','ingresos':'Análisis de Ingresos','gastos':'Análisis de Gastos','rentabilidad':'Rentabilidad','proyecciones':'Proyecciones','ia':'🤖 Análisis IA','marketing':'📣 Estrategia de Marketing','alertas':'Centro de Alertas','transferencias':'Transferencias & Categorización','deudas':'🔴 Deudas & Obligaciones','posnet':'💳 Ingresos Posnet Evergreen','fondos':'💼 Fondo Personal — Estudio Jurídico','gastos-personal':'💸 Gastos Personales'};
 
 function setCF(tab, el) {
   ['cajas','ars','uy','usd','personal'].forEach(t => { const e = document.getElementById('cf-'+t); if(e) e.style.display = t===tab?'block':'none'; });
@@ -2696,6 +2732,7 @@ function go(id,el){
   if(id==='posnet') renderPosnet();
   if(id==='evergreen' && typeof renderProductosInline === 'function') renderProductosInline(false);
   if(id==='evergreen') renderEvergreenKPI();
+  if(id==='facturas') facturasInit();
   setTimeout(()=>renderCharts(id),60);
 }
 function goBack(){ go(window._prevSec||'dash', null); }
@@ -4517,10 +4554,80 @@ function isStaffUser(){
   const r=(_user.user_metadata&&_user.user_metadata.role)||(_user.app_metadata&&_user.app_metadata.role);
   return r==='staff';
 }
+async function facturasInit(){
+  if(typeof cargaInjectCSS==='function') cargaInjectCSS();
+  const t=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  const e=document.getElementById('fc-fecha'); if(e&&!e.value) e.value=t;
+  renderFacturas();
+}
+async function guardarFactura(){
+  const msg=document.getElementById('fc-msg'), btn=document.getElementById('fc-btn'), g=id=>document.getElementById(id).value;
+  const row={ fecha:g('fc-fecha'), proveedor:g('fc-prov').trim(), monto:parseFloat(g('fc-monto'))||0, detalle:g('fc-detalle').trim(), vencimiento:g('fc-venc')||null, estado:'pendiente', colab:(window._staffName||''), source:'app' };
+  msg.style.color='var(--muted)'; msg.textContent='';
+  if(!row.fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
+  if(!row.proveedor){ msg.style.color='var(--red)'; msg.textContent='Falta el proveedor.'; return; }
+  if(!row.monto){ msg.style.color='var(--red)'; msg.textContent='Falta el monto.'; return; }
+  btn.disabled=true; const ot=btn.textContent; btn.textContent='Guardando…';
+  try{ const {error}=await _sb.from('facturas').insert(row); if(error) throw error;
+    msg.style.color='var(--green)'; msg.textContent='✓ Factura guardada (pendiente): $'+row.monto.toLocaleString('es-UY');
+    document.getElementById('fc-prov').value=''; document.getElementById('fc-monto').value=''; document.getElementById('fc-detalle').value=''; document.getElementById('fc-venc').value='';
+    renderFacturas();
+  }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
+  btn.disabled=false; btn.textContent=ot;
+}
+async function renderFacturas(){
+  if(typeof cargaInjectCSS==='function') cargaInjectCSS();
+  const elP=document.getElementById('fc-pendientes'), elG=document.getElementById('fc-pagadas');
+  if(!elP) return; elP.style.color='var(--muted)'; elP.textContent='Cargando…';
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  try{
+    const {data}=await _sb.from('facturas').select('id,fecha,proveedor,monto,detalle,vencimiento,estado,fecha_pago').order('id',{ascending:false}).limit(500);
+    const rows=data||[];
+    const pend=rows.filter(r=>r.estado!=='pagada');
+    const pag=rows.filter(r=>r.estado==='pagada').slice(0,30);
+    const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
+    const totP=pend.reduce((a,r)=>a+(+r.monto||0),0);
+    let hp='<div style="color:var(--yellow);font-weight:700;margin-bottom:8px">Total pendiente: '+f(totP)+' ('+pend.length+')</div>';
+    if(pend.length){
+      hp+='<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Detalle</th><th style="text-align:left;padding:3px 6px">Vence</th><th style="text-align:right;padding:3px 6px">Monto</th><th style="padding:3px 6px"></th></tr></thead><tbody>';
+      hp+=pend.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px;color:var(--muted)">'+((r.detalle||'').slice(0,45))+'</td><td style="padding:3px 6px;color:'+((r.vencimiento&&r.vencimiento<hoy)?'var(--red)':'var(--muted)')+'">'+(r.vencimiento||'-')+'</td><td style="padding:3px 6px;text-align:right;font-weight:600">'+f(r.monto)+'</td><td style="padding:3px 6px;white-space:nowrap"><button onclick="marcarPagada('+r.id+')" style="background:var(--green);color:#08130d;border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer">Pagada</button> <span onclick="borrarFactura('+r.id+')" style="cursor:pointer;color:var(--muted);margin-left:4px" title="Borrar">✕</span></td></tr>').join('');
+      hp+='</tbody></table></div>';
+    } else { hp+='<div style="color:var(--muted)">Sin facturas pendientes 🎉</div>'; }
+    elP.style.color='var(--text)'; elP.innerHTML=hp;
+    let hg='';
+    if(pag.length){
+      hg='<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Pagada</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Detalle</th><th style="text-align:right;padding:3px 6px">Monto</th></tr></thead><tbody>';
+      hg+=pag.map(r=>'<tr><td style="padding:3px 6px">'+(r.fecha_pago||r.fecha)+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px;color:var(--muted)">'+((r.detalle||'').slice(0,45))+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+f(r.monto)+'</td></tr>').join('');
+      hg+='</tbody></table></div>';
+    } else { hg='<div style="color:var(--muted)">Todavía no hay facturas pagadas.</div>'; }
+    if(elG) elG.innerHTML=hg;
+  }catch(e){ elP.style.color='var(--red)'; elP.textContent='No se pudo leer: '+(e.message||e); }
+}
+async function marcarPagada(id){
+  if(!confirm('¿Marcar como pagada? Se registra como Pago Prex.')) return;
+  try{
+    const {data:fr}=await _sb.from('facturas').select('*').eq('id',id).single();
+    if(!fr) throw new Error('factura no encontrada');
+    const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+    const {data:pp,error:e1}=await _sb.from('prex_payments').insert({fecha:hoy, proveedor:fr.proveedor, concepto:(fr.detalle||('Factura '+(fr.proveedor||''))), tipo:'variable', monto:fr.monto, source:'app'}).select('id').single();
+    if(e1) throw e1;
+    const {error:e2}=await _sb.from('facturas').update({estado:'pagada', fecha_pago:hoy, prex_payment_id:(pp?pp.id:null)}).eq('id',id);
+    if(e2) throw e2;
+    renderFacturas();
+    if(typeof loadPrexMes==='function'){ try{ await loadPrexMes(); }catch(e){} }
+    if(typeof renderEvergreenKPI==='function'){ try{ renderEvergreenKPI(); }catch(e){} }
+  }catch(e){ alert('No se pudo marcar como pagada: '+(e.message||e)); }
+}
+async function borrarFactura(id){
+  if(!confirm('¿Borrar esta factura?')) return;
+  try{ const {error}=await _sb.from('facturas').delete().eq('id',id); if(error) throw error; renderFacturas(); }
+  catch(e){ alert('No se pudo borrar: '+(e.message||e)); }
+}
+
 function applyAccessControl(){
   const pb=document.getElementById('carga-tab-prex');
   if(isStaffUser()){
-    document.querySelectorAll('#sb .ni').forEach(n=>{ n.style.display=(n.id==='ni-carga')?'':'none'; });
+    document.querySelectorAll('#sb .ni').forEach(n=>{ n.style.display=(n.id==='ni-carga'||n.id==='ni-facturas')?'':'none'; });
     document.querySelectorAll('#sb .nl').forEach(l=>{ l.style.display=(l.textContent==='Operación')?'':'none'; });
     if(pb) pb.style.display='';
     go('carga', document.getElementById('ni-carga'));
