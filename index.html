@@ -2480,12 +2480,12 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <div class="ct">Total Bruto Posnet</div>
       <div class="cv" style="color:var(--bright)" id="pos-total">$119.306</div>
       <div class="cs" id="pos-total-usd">USD 3.059 al TC actual</div>
-      <div class="badge bg">22 liquidaciones</div>
+      <div class="badge bg" id="pos-badge">22 liquidaciones</div>
     </div>
     <div class="card">
       <div class="ct">Comisión Handy</div>
-      <div class="cv-sm" style="color:var(--red)">-$1.593</div>
-      <div class="cs">UY · cobrada el 6/4</div>
+      <div class="cv-sm" style="color:var(--red)" id="pos-com">-$1.593</div>
+      <div class="cs">UY · estimada ~1,3%</div>
       <div class="badge br">Gasto registrado</div>
     </div>
     <div class="card">
@@ -3888,32 +3888,34 @@ function deleteDeuda(id) {
 }
 
 // ═══ POSNET ═══
-function renderPosnet() {
+async function renderPosnet() {
   const tbody = document.getElementById('posnet-tbody');
   if (!tbody) return;
-  const total = POSNET_INGRESOS.reduce((a,p)=>a+p.monto,0);
-  const neto  = total - POSNET_COMISION;
-  const prom  = total / POSNET_INGRESOS.length;
-
-  tbody.innerHTML = POSNET_INGRESOS.map(p=>`
-    <tr>
-      <td>${p.fecha.slice(5).replace('-','/')}</td>
-      <td class="tr mono" style="color:var(--bright)">$${p.monto.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:2})}</td>
-      <td class="tr" style="color:var(--muted)">USD ${Math.round(p.monto/FX.usd).toLocaleString()}</td>
-    </tr>`).join('');
-
+  const hoy = (window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  const desde = (typeof _hace30==='function')? _hace30(hoy) : hoy;
+  let rows=[];
+  try{
+    const {data}=await _sb.from('daily_cashflow').select('fecha,turno,tarjeta').gte('fecha',desde).lte('fecha',hoy).order('fecha',{ascending:false}).order('turno',{ascending:true});
+    rows=(data||[]).filter(r=>(+r.tarjeta||0)>0);
+  }catch(e){ tbody.innerHTML='<tr><td colspan="3" style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</td></tr>'; return; }
+  const total = rows.reduce((a,r)=>a+(+r.tarjeta||0),0);
+  const comision = Math.round(total*0.0134);
+  const neto = total - comision;
+  const dias = new Set(rows.map(r=>r.fecha)).size || 1;
+  const prom = total/dias;
+  tbody.innerHTML = rows.map(r=>'<tr><td>'+r.fecha.slice(5).replace('-','/')+' <span style="color:var(--muted);font-size:10px">'+(r.turno||'')+'</span></td><td class="tr mono" style="color:var(--bright)">$'+Math.round(+r.tarjeta||0).toLocaleString('es-UY')+'</td><td class="tr" style="color:var(--muted)">USD '+Math.round((+r.tarjeta||0)/FX.usd).toLocaleString()+'</td></tr>').join('') || '<tr><td colspan="3" style="color:var(--muted)">Sin ventas con tarjeta en el período</td></tr>';
   const fmt = v => '$'+Math.round(v).toLocaleString('es-UY');
   const fmtUSD = v => 'USD '+Math.round(v/FX.usd).toLocaleString();
   const set = (id,val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
-
   set('pos-total',    fmt(total));
   set('pos-total-usd',fmtUSD(total)+' al TC actual');
+  set('pos-com',      '-'+fmt(comision));
   set('pos-neto',     fmt(neto));
   set('pos-neto-usd', fmtUSD(neto));
   set('pos-prom',     fmt(prom));
+  set('pos-badge',    dias+' días con tarjeta');
   set('pos-tfoot-uy', fmt(total));
   set('pos-tfoot-usd',fmtUSD(total));
-  // dashboard cards
   set('dash-posnet-total', fmt(total));
   set('dash-posnet-usdval','USD '+Math.round(total/FX.usd).toLocaleString());
   set('hub-posnet', fmt(total));
@@ -4181,7 +4183,7 @@ function renderLiveBanner(D){
   const old = document.getElementById('live-banner'); if (old) old.remove();
   const col = { verde: 'var(--green)', amarillo: 'var(--yellow)', rojo: 'var(--red)' };
   const chips = (D.alerts || []).map(a => '<span style="display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:20px;font-size:11px;background:rgba(255,255,255,.04);border:1px solid ' + (col[a.tipo] || 'var(--border)') + ';color:' + (col[a.tipo] || 'var(--text)') + '">' + a.msg + '</span>').join('');
-  const cg = (D.cajaGrande && D.cajaGrande.saldoUY != null) ? ' · Caja Grande: $' + D.cajaGrande.saldoUY.toLocaleString('es-UY') : '';
+  const cg = '';
   const div = document.createElement('div');
   div.id = 'live-banner';
   div.style.cssText = 'margin:0 0 14px;padding:12px 14px;border:1px solid var(--green);border-radius:10px;background:rgba(82,183,136,.06)';
@@ -4277,17 +4279,28 @@ function cajaAuto(){
   document.getElementById('cj-fin').value=Math.round(fin);
 }
 function _hace30(hoy){ const d=new Date(hoy+'T00:00:00'); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); }
+async function borrarVentaRec(id){
+  if(!confirm('¿Borrar esta venta?')) return;
+  try{ const {error}=await _sb.from('daily_sales').delete().eq('id',id); if(error) throw error; _vi_cache=null; renderVentasRecientes(); }
+  catch(e){ alert('No se pudo borrar: '+(e.message||e)); }
+}
+async function borrarGastoRec(id){
+  if(!confirm('¿Borrar este gasto?')) return;
+  try{ const {error}=await _sb.from('daily_expenses').delete().eq('id',id); if(error) throw error; _gi_cache=null; renderGastosRecientes(); }
+  catch(e){ alert('No se pudo borrar: '+(e.message||e)); }
+}
+
 async function renderVentasRecientes(){
   const el=document.getElementById('cv-recientes'); if(!el) return;
   el.style.color='var(--muted)'; el.textContent='Cargando…';
   try{
     const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10); const m1=hoy.slice(0,8)+'01';
-    const {data}=await _sb.from('daily_sales').select('fecha,colab,producto,cantidad,total,metodo_pago').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('id',{ascending:false}).limit(2000);
+    const {data}=await _sb.from('daily_sales').select('id,fecha,colab,producto,cantidad,total,metodo_pago').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('id',{ascending:false}).limit(2000);
     const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
     let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Ventas (últimos 30 días)</div>';
     if(rows.length){
-      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Colab</th><th style="text-align:left;padding:3px 6px">Producto</th><th style="text-align:right;padding:3px 6px">Cant</th><th style="text-align:right;padding:3px 6px">Total</th><th style="text-align:left;padding:3px 6px">Pago</th></tr></thead><tbody>';
-      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.colab||'-')+'</td><td style="padding:3px 6px">'+(r.producto||'-')+'</td><td style="padding:3px 6px;text-align:right">'+(r.cantidad||'')+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+f(r.total)+'</td><td style="padding:3px 6px">'+(r.metodo_pago||'-')+'</td></tr>').join('');
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Colab</th><th style="text-align:left;padding:3px 6px">Producto</th><th style="text-align:right;padding:3px 6px">Cant</th><th style="text-align:right;padding:3px 6px">Total</th><th style="text-align:left;padding:3px 6px">Pago</th><th style="padding:3px 6px"></th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.colab||'-')+'</td><td style="padding:3px 6px">'+(r.producto||'-')+'</td><td style="padding:3px 6px;text-align:right">'+(r.cantidad||'')+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+f(r.total)+'</td><td style="padding:3px 6px">'+(r.metodo_pago||'-')+'</td><td style="padding:3px 6px;text-align:center"><span onclick="borrarVentaRec('+r.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span></td></tr>').join('');
       html+='</tbody></table></div>';
     } else { html+='<div style="color:var(--muted)">Sin ventas cargadas todavía.</div>'; }
     el.style.color='var(--text)'; el.innerHTML=html;
@@ -4298,17 +4311,23 @@ async function renderGastosRecientes(){
   el.style.color='var(--muted)'; el.textContent='Cargando…';
   try{
     const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10); const m1=hoy.slice(0,8)+'01';
-    const {data}=await _sb.from('daily_expenses').select('fecha,proveedor,producto,unidades,total').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('id',{ascending:false}).limit(2000);
+    const {data}=await _sb.from('daily_expenses').select('id,fecha,proveedor,producto,unidades,total').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('id',{ascending:false}).limit(2000);
     const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
     let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Gastos (últimos 30 días)</div>';
     if(rows.length){
-      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Producto</th><th style="text-align:right;padding:3px 6px">Unid</th><th style="text-align:right;padding:3px 6px">Total</th></tr></thead><tbody>';
-      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px">'+(r.producto||'-')+'</td><td style="padding:3px 6px;text-align:right">'+(r.unidades||'')+'</td><td style="padding:3px 6px;text-align:right;color:var(--red);font-weight:600">'+f(r.total)+'</td></tr>').join('');
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Producto</th><th style="text-align:right;padding:3px 6px">Unid</th><th style="text-align:right;padding:3px 6px">Total</th><th style="padding:3px 6px"></th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px">'+(r.producto||'-')+'</td><td style="padding:3px 6px;text-align:right">'+(r.unidades||'')+'</td><td style="padding:3px 6px;text-align:right;color:var(--red);font-weight:600">'+f(r.total)+'</td><td style="padding:3px 6px;text-align:center"><span onclick="borrarGastoRec('+r.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span></td></tr>').join('');
       html+='</tbody></table></div>';
     } else { html+='<div style="color:var(--muted)">Sin gastos cargados todavía.</div>'; }
     el.style.color='var(--text)'; el.innerHTML=html;
   }catch(e){ el.style.color='var(--red)'; el.textContent='No se pudo leer: '+(e.message||e); }
 }
+async function borrarCajaTurno(fecha,turno){
+  if(!confirm('¿Borrar la caja del '+fecha+' ('+turno+')?')) return;
+  try{ const {error}=await _sb.from('daily_cashflow').delete().eq('fecha',fecha).eq('turno',turno); if(error) throw error; renderCajasRecientes(); }
+  catch(e){ alert('No se pudo borrar: '+(e.message||e)); }
+}
+
 async function renderCajasRecientes(){
   const el=document.getElementById('cj-recientes'); if(!el) return;
   const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
@@ -4318,8 +4337,8 @@ async function renderCajasRecientes(){
     const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
     let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Cajas por turno (últimos 30 días)</div>';
     if(rows.length){
-      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 5px">Fecha</th><th style="text-align:left;padding:3px 5px">Turno</th><th style="text-align:left;padding:3px 5px">Colab</th><th style="text-align:right;padding:3px 5px">Caja ini</th><th style="text-align:right;padding:3px 5px">Efectivo</th><th style="text-align:right;padding:3px 5px">Tarjeta</th><th style="text-align:right;padding:3px 5px">Total</th><th style="text-align:right;padding:3px 5px">Gastos</th><th style="text-align:right;padding:3px 5px">Jorn</th><th style="text-align:right;padding:3px 5px">A caja gde</th><th style="text-align:right;padding:3px 5px">Caja final</th></tr></thead><tbody>';
-      html+=rows.map(r=>'<tr><td style="padding:3px 5px">'+r.fecha+'</td><td style="padding:3px 5px;color:var(--muted)">'+(r.turno||'-')+'</td><td style="padding:3px 5px">'+(r.colab||'-')+'</td><td style="padding:3px 5px;text-align:right">'+f(r.caja_inicial)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.efectivo)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.tarjeta)+'</td><td style="padding:3px 5px;text-align:right;color:var(--green);font-weight:600">'+f(r.total_ventas)+'</td><td style="padding:3px 5px;text-align:right;color:var(--red)">'+f(r.gastos)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.jornales)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.a_caja_grande)+'</td><td style="padding:3px 5px;text-align:right;font-weight:700">'+f(r.tot_caja_efectivo_final)+'</td></tr>').join('');
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 5px">Fecha</th><th style="text-align:left;padding:3px 5px">Turno</th><th style="text-align:left;padding:3px 5px">Colab</th><th style="text-align:right;padding:3px 5px">Caja ini</th><th style="text-align:right;padding:3px 5px">Efectivo</th><th style="text-align:right;padding:3px 5px">Tarjeta</th><th style="text-align:right;padding:3px 5px">Total</th><th style="text-align:right;padding:3px 5px">Gastos</th><th style="text-align:right;padding:3px 5px">Jorn</th><th style="text-align:right;padding:3px 5px">A caja gde</th><th style="text-align:right;padding:3px 5px">Caja final</th><th style="padding:3px 5px"></th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 5px">'+r.fecha+'</td><td style="padding:3px 5px;color:var(--muted)">'+(r.turno||'-')+'</td><td style="padding:3px 5px">'+(r.colab||'-')+'</td><td style="padding:3px 5px;text-align:right">'+f(r.caja_inicial)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.efectivo)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.tarjeta)+'</td><td style="padding:3px 5px;text-align:right;color:var(--green);font-weight:600">'+f(r.total_ventas)+'</td><td style="padding:3px 5px;text-align:right;color:var(--red)">'+f(r.gastos)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.jornales)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.a_caja_grande)+'</td><td style="padding:3px 5px;text-align:right;font-weight:700">'+f(r.tot_caja_efectivo_final)+'</td><td style="padding:3px 5px;text-align:center"><span onclick="borrarCajaTurno(\''+r.fecha+'\',\''+(r.turno||'')+'\')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span></td></tr>').join('');
       html+='</tbody></table></div>';
     } else { html+='<div style="color:var(--muted)">Sin cajas cargadas todavía.</div>'; }
     el.style.color='var(--text)'; el.innerHTML=html;
