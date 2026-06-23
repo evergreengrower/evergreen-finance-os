@@ -686,7 +686,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Plata del negocio que pagás desde tu Prex (proveedores, alquiler, etc.). Se resta de la utilidad del mes. Podés cargar uno a uno o todos juntos a fin de mes.</div>
     <div class="g g4" style="gap:10px">
       <div><label class="cg-l">Fecha</label><input type="date" id="cp-fecha" class="cg-i"></div>
-      <div><label class="cg-l">Proveedor / a quién</label><input type="text" id="cp-prov" class="cg-i" placeholder="Nombre"></div>
+      <div><label class="cg-l">Proveedor / a quién</label><input type="text" id="cp-prov" class="cg-i" list="cp-prov-list" oninput="prexAutoCat()" placeholder="Buscá o escribí"><datalist id="cp-prov-list"></datalist></div>
       <div><label class="cg-l">Tipo</label><select id="cp-tipo" class="cg-i"><option value="variable">Variable (proveedor)</option><option value="fijo">Gasto fijo (alquiler...)</option></select></div>
       <div><label class="cg-l">Monto $</label><input type="number" id="cp-monto" class="cg-i" min="0" step="1" style="font-weight:700"></div>
     </div>
@@ -3356,6 +3356,8 @@ function saveCajas() {
     localStorage.setItem('evg_cajas',     JSON.stringify(CAJAS));
     localStorage.setItem('evg_cajas_mov', JSON.stringify(CAJAS_MOV));
     localStorage.setItem('evg_cajas_nid', String(cajasNextId));
+    localStorage.setItem('evg_deudas', JSON.stringify(DEUDAS));
+    localStorage.setItem('evg_gf',     JSON.stringify(EVG_GF));
   } catch(e) { console.warn('No se pudo guardar cajas en cache local:', e); }
   if (!_user) return;
   _hasUnsynced = true;
@@ -3369,7 +3371,9 @@ async function pushCajasToCloud(){
     const rows = [
       { user_id: _user.id, key: 'evg_cajas',     value: CAJAS },
       { user_id: _user.id, key: 'evg_cajas_mov', value: CAJAS_MOV },
-      { user_id: _user.id, key: 'evg_cajas_nid', value: cajasNextId }
+      { user_id: _user.id, key: 'evg_cajas_nid', value: cajasNextId },
+      { user_id: _user.id, key: 'evg_deudas',    value: DEUDAS },
+      { user_id: _user.id, key: 'evg_gf',        value: EVG_GF }
     ];
     const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'user_id,key' });
     if (error) throw error;
@@ -3389,6 +3393,8 @@ async function loadCajas() {
     if (c) { CAJAS = { ...CAJAS, ...JSON.parse(c) }; hadLocalData = true; }
     if (m) { CAJAS_MOV = JSON.parse(m); hadLocalData = true; }
     if (n) { cajasNextId = parseInt(n) || 1; }
+    const dd = localStorage.getItem('evg_deudas'); if (dd) { const a = JSON.parse(dd); if (Array.isArray(a)) DEUDAS = a; }
+    const gg = localStorage.getItem('evg_gf');     if (gg) { const a = JSON.parse(gg); if (Array.isArray(a)) EVG_GF = a; }
   } catch(e) { console.warn('No se pudo cargar cache local:', e); }
   if (!_user) return;
   try {
@@ -3400,8 +3406,12 @@ async function loadCajas() {
         if (row.key === 'evg_cajas')     CAJAS = { ...CAJAS, ...row.value };
         if (row.key === 'evg_cajas_mov') CAJAS_MOV = Array.isArray(row.value) ? row.value : [];
         if (row.key === 'evg_cajas_nid') cajasNextId = parseInt(row.value) || 1;
+        if (row.key === 'evg_deudas' && Array.isArray(row.value)) DEUDAS = row.value;
+        if (row.key === 'evg_gf'     && Array.isArray(row.value)) EVG_GF = row.value;
       }
       if (typeof renderCajas === 'function') renderCajas();
+      if (typeof renderDeudas === 'function') renderDeudas();
+      if (typeof renderEvgGF === 'function') renderEvgGF();
       setSyncStatus('●  Sincronizado', 'synced');
     } else if (hadLocalData) {
       console.info('Subiendo datos locales a Supabase (primer login post-migración)');
@@ -3872,7 +3882,7 @@ function addEvgGF() {
   document.getElementById('evg-gf-concepto').value = '';
   document.getElementById('evg-gf-prov').value = '';
   document.getElementById('evg-gf-monto').value = '';
-  renderEvgGF();
+  renderEvgGF(); saveCajas();
 }
 
 function editEvgGF(id) {
@@ -3881,13 +3891,13 @@ function editEvgGF(id) {
   const nuevoMonto = parseFloat(prompt(`Nuevo monto para "${r.concepto}" (${r.moneda}):`, r.monto));
   if (isNaN(nuevoMonto) || nuevoMonto <= 0) return;
   r.monto = nuevoMonto;
-  renderEvgGF();
+  renderEvgGF(); saveCajas();
 }
 
 function deleteEvgGF(id) {
   if (!confirm('¿Eliminar este gasto fijo?')) return;
   EVG_GF = EVG_GF.filter(x => x.id !== id);
-  renderEvgGF();
+  renderEvgGF(); saveCajas();
 }
 
 // MÓDULO DEUDAS
@@ -3964,7 +3974,7 @@ function addDeuda() {
   document.getElementById('d-concepto').value = '';
   document.getElementById('d-monto').value = '';
   prev.innerHTML = `<span style="color:var(--green)">✓ ${acreedor} registrado — $${monto.toLocaleString('es-UY')} UY</span>`;
-  renderDeudas();
+  renderDeudas(); saveCajas();
 }
 
 function updateDeudaEstado(id, estado) {
@@ -3974,7 +3984,7 @@ function updateDeudaEstado(id, estado) {
 
 function deleteDeuda(id) {
   DEUDAS = DEUDAS.filter(d => d.id !== id);
-  renderDeudas();
+  renderDeudas(); saveCajas();
 }
 
 // ═══ POSNET ═══
@@ -4382,6 +4392,13 @@ async function cargaInit(){
     try{ if(typeof fetchProductos==='function'){ await fetchProductos(); } }catch(e){}
     const dl=document.getElementById('cv-prod-list');
     if(dl&&_prod_cache) dl.innerHTML=_prod_cache.map(p=>'<option value="'+String(p.nombre||'').replace(/"/g,'')+'">').join('');
+    const _rubros=[...new Set((_prod_cache||[]).map(p=>String(p.rubro||'').trim()).filter(Boolean))].sort();
+    try{ const {data}=await _sb.from('proveedores').select('nombre,categoria'); window._proveedores=data||[]; }catch(e){ window._proveedores=window._proveedores||[]; }
+    const _provs=[...new Set([].concat((window._proveedores||[]).map(p=>p.nombre),(_prod_cache||[]).map(p=>p.proveedor)).map(s=>String(s||'').trim()).filter(Boolean))].sort();
+    const _tsel=document.getElementById('cp-tipo');
+    if(_tsel) _tsel.innerHTML='<option value="Compra de stock / mercadería">Compra de stock / mercadería</option>'+_rubros.map(r=>'<option value="'+r.replace(/"/g,'')+'">'+r+'</option>').join('')+'<option value="Gasto fijo">Gasto fijo</option><option value="Otro">Otro</option>';
+    const _pdl=document.getElementById('cp-prov-list');
+    if(_pdl) _pdl.innerHTML=_provs.map(p=>'<option value="'+p.replace(/"/g,'')+'">').join('');
   }catch(e){}
   renderCargaHoy();
   renderPrexMes();
@@ -4533,6 +4550,17 @@ async function guardarGasto(){
     document.getElementById('cg-unid').value='1'; document.getElementById('cg-costo').value=''; _gi_cache=null; renderCargaHoy(); renderGastosRecientes();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
+}
+function prexAutoCat(){
+  const v=(document.getElementById('cp-prov').value||'').trim().toLowerCase();
+  if(!v) return;
+  const p=(window._proveedores||[]).find(x=>String(x.nombre||'').trim().toLowerCase()===v);
+  if(p&&p.categoria){
+    const sel=document.getElementById('cp-tipo'); if(!sel) return;
+    let found=false; for(const o of sel.options){ if(o.value===p.categoria){ found=true; break; } }
+    if(!found){ const o=document.createElement('option'); o.value=p.categoria; o.textContent=p.categoria; sel.insertBefore(o, sel.firstChild); }
+    sel.value=p.categoria;
+  }
 }
 async function guardarPrex(){
   const msg=document.getElementById('cp-msg'), btn=document.getElementById('cp-btn'), g=id=>document.getElementById(id).value;
@@ -5815,7 +5843,7 @@ function showEvSub(tipo, card) {
         const _hoyE=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
         const _m1E=_hoyE.slice(0,8)+'01';
         const {data:_pp}=await _sb.from('prex_payments').select('fecha,proveedor,concepto,tipo,monto').gte('fecha',_m1E).lte('fecha',_hoyE);
-        neg=(_pp||[]).map(r=>({fecha:r.fecha, benef:(r.proveedor||r.concepto||'Prex'), cat:(r.proveedor||r.concepto||'Prex'), monto:+r.monto||0, moneda:'UY', tipo:'Negocio', sub:(r.tipo==='fijo'?'GF':'GV')}));
+        neg=(_pp||[]).map(r=>({fecha:r.fecha, benef:(r.proveedor||r.concepto||'Prex'), cat:(r.proveedor||r.concepto||'Prex'), monto:+r.monto||0, moneda:'UY', tipo:'Negocio', sub:((r.tipo==='fijo'||r.tipo==='Gasto fijo')?'GF':'GV')}));
       }catch(e){}
       const gvList = neg.filter(t=>t.sub==='GV').sort((a,b)=>toUY(b)-toUY(a));
       const gfList = neg.filter(t=>t.sub==='GF').sort((a,b)=>toUY(b)-toUY(a));
