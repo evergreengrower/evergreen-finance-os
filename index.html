@@ -366,6 +366,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div class="ni on" onclick="go('dash',this)"><span class="ni-ic">🏠</span><span>Hub Ecosystem</span></div>
     <div class="nl">Negocios</div>
     <div class="ni" onclick="go('evergreen',this)"><span class="ni-ic">🌿</span><span>Evergreen Culture</span></div>
+    <div class="ni" onclick="go('proveedores',this)"><span class="ni-ic">🤝</span><span>Proveedores</span></div>
     <div class="ni" onclick="go('medplant',this)"><span class="ni-ic">🏥</span><span>Medplant</span></div>
     <div class="ni" onclick="go('ong',this)"><span class="ni-ic">🤝</span><span>BA Evergreen ONG</span></div>
     <div class="ni" onclick="go('farm',this)"><span class="ni-ic">🌱</span><span>Evergreen Farm ARG</span></div>
@@ -741,6 +742,28 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   </div>
 </section>
 
+<!-- ═══════════════ MÓDULO PROVEEDORES ═══════════════ -->
+<section id="proveedores" class="sec">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div class="pg-title" style="margin:0">🤝 Proveedores</div>
+    <button onclick="goBack()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap">← Atrás</button>
+  </div>
+  <div class="pg-sub">Logos, listas de precios (PDF) y catálogos de cada proveedor</div>
+
+  <div class="card" style="max-width:840px;margin-top:14px">
+    <div class="stl" style="margin-bottom:8px">Agregar / editar proveedor</div>
+    <div class="g g3" style="gap:10px">
+      <div><label class="cg-l">Nombre</label><input type="text" id="pr-nombre" class="cg-i" placeholder="Proveedor"></div>
+      <div><label class="cg-l">Categoría</label><input type="text" id="pr-cat" class="cg-i" placeholder="ej: Bebidas"></div>
+      <div><label class="cg-l">Detalle</label><input type="text" id="pr-detalle" class="cg-i" placeholder="Qué provee"></div>
+    </div>
+    <button onclick="addProveedor()" id="pr-btn" style="margin-top:14px;padding:10px 18px;background:var(--green);color:#08130d;border:none;border-radius:8px;font-weight:700;cursor:pointer">＋ Guardar proveedor</button>
+    <div id="pr-msg" style="margin-top:8px;font-size:13px;min-height:18px"></div>
+  </div>
+
+  <div id="proveedores-list" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px">—</div>
+</section>
+
 <section id="evergreen" class="sec">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px">
     <button onclick="go('dash',null)" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer">← Hub</button>
@@ -749,6 +772,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div class="pg-sub">Growshop + Coffee Shop · Colonia del Sacramento · Abril 2026</div>
   <div style="margin:12px 0 4px">
     <button onclick="go('carga',document.getElementById('ni-carga'))" style="padding:11px 20px;background:var(--green);color:#08130d;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer">📝 Cargar operación del día — Cajas · Ventas · Gastos · Prex</button>
+    <button onclick="go('proveedores',null)" style="margin-left:8px;padding:11px 18px;background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:14px;font-weight:700;cursor:pointer">🤝 Proveedores</button>
   </div>
 
   <div class="g g4">
@@ -2710,7 +2734,7 @@ function updateKPIs(){
 }
 
 // ═══ NAV ═══
-const titles={'carga':'📝 Carga Diaria','facturas':'🧾 Facturas / Cuentas por Pagar','dash':'🌿 Evergreen Ecosystem — Hub','evergreen':'🌿 Evergreen Culture','medplant':'🏥 Medplant','ong':'🤝 BA Evergreen ONG','farm':'🌱 Evergreen Farm ARG','cashflow':'💰 Cash Flow','prex':'💳 Caja Prex','gastfijos':'🏠 Gastos Fijos Personales','paises':'Finanzas por País','monedas':'Monedas y Conversión','ingresos':'Análisis de Ingresos','gastos':'Análisis de Gastos','rentabilidad':'Rentabilidad','proyecciones':'Proyecciones','ia':'🤖 Análisis IA','marketing':'📣 Estrategia de Marketing','alertas':'Centro de Alertas','transferencias':'Transferencias & Categorización','deudas':'🔴 Deudas & Obligaciones','posnet':'💳 Ingresos Posnet Evergreen','fondos':'💼 Fondo Personal — Estudio Jurídico','gastos-personal':'💸 Gastos Personales'};
+const titles={'carga':'📝 Carga Diaria','facturas':'🧾 Facturas / Cuentas por Pagar','dash':'🌿 Evergreen Ecosystem — Hub','evergreen':'🌿 Evergreen Culture','proveedores':'🤝 Proveedores','medplant':'🏥 Medplant','ong':'🤝 BA Evergreen ONG','farm':'🌱 Evergreen Farm ARG','cashflow':'💰 Cash Flow','prex':'💳 Caja Prex','gastfijos':'🏠 Gastos Fijos Personales','paises':'Finanzas por País','monedas':'Monedas y Conversión','ingresos':'Análisis de Ingresos','gastos':'Análisis de Gastos','rentabilidad':'Rentabilidad','proyecciones':'Proyecciones','ia':'🤖 Análisis IA','marketing':'📣 Estrategia de Marketing','alertas':'Centro de Alertas','transferencias':'Transferencias & Categorización','deudas':'🔴 Deudas & Obligaciones','posnet':'💳 Ingresos Posnet Evergreen','fondos':'💼 Fondo Personal — Estudio Jurídico','gastos-personal':'💸 Gastos Personales'};
 
 function setCF(tab, el) {
   ['cajas','ars','uy','usd','personal'].forEach(t => { const e = document.getElementById('cf-'+t); if(e) e.style.display = t===tab?'block':'none'; });
@@ -2737,6 +2761,7 @@ function go(id,el){
   if(id==='evergreen' && typeof renderProductosInline === 'function') renderProductosInline(false);
   if(id==='evergreen') renderEvergreenKPI();
   if(id==='evergreen') loadGfPagos();
+  if(id==='proveedores') renderProveedores();
   if(id==='facturas') facturasInit();
   setTimeout(()=>renderCharts(id),60);
 }
@@ -4709,6 +4734,75 @@ async function borrarFactura(id){
   if(!confirm('¿Borrar esta factura?')) return;
   try{ const {error}=await _sb.from('facturas').delete().eq('id',id); if(error) throw error; renderFacturas(); }
   catch(e){ alert('No se pudo borrar: '+(e.message||e)); }
+}
+
+async function renderProveedores(){
+  if(typeof cargaInjectCSS==='function') cargaInjectCSS();
+  const el=document.getElementById('proveedores-list'); if(!el) return;
+  el.innerHTML='<div style="color:var(--muted)">Cargando…</div>';
+  try{
+    const [pv,ar]=await Promise.all([
+      _sb.from('proveedores').select('id,nombre,categoria,detalle,logo_url').order('nombre'),
+      _sb.from('proveedor_archivos').select('id,proveedor,nombre_archivo,url').order('id',{ascending:false})
+    ]);
+    const provs=pv.data||[]; const arch=ar.data||[];
+    window._proveedores=provs.map(p=>({nombre:p.nombre,categoria:p.categoria}));
+    el.innerHTML=provs.map(p=>{
+      const files=arch.filter(a=>a.proveedor===p.nombre);
+      const safe=String(p.nombre||'').replace(/'/g,'');
+      const logo = p.logo_url ? '<img src="'+p.logo_url+'" style="width:48px;height:48px;object-fit:contain;border-radius:8px;background:#fff;padding:2px">' : '<div style="width:48px;height:48px;border-radius:8px;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:20px">🏷️</div>';
+      const fhtml = files.length ? files.map(a=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0"><a href="'+a.url+'" target="_blank" style="color:var(--green);text-decoration:none;font-size:12px">📄 '+(a.nombre_archivo||'archivo')+'</a><span onclick="borrarArchivo('+a.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span></div>').join('') : '<span style="color:var(--muted);font-size:12px">Sin PDFs</span>';
+      return '<div class="card" style="padding:14px">'
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+logo
+        +'<div style="flex:1"><div style="font-weight:700">'+(p.nombre||'')+'</div><div style="font-size:11px;color:var(--muted)">'+(p.categoria||'')+'</div></div>'
+        +'<span onclick="borrarProveedor('+p.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar proveedor">✕</span></div>'
+        +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px;min-height:16px">'+(p.detalle||'')+'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+        +'<label style="font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 9px;cursor:pointer">🖼️ Subir logo<input type="file" accept="image/*" style="display:none" onchange="subirLogo(\''+safe+'\',this)"></label>'
+        +'<label style="font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 9px;cursor:pointer">📄 Subir PDF<input type="file" accept="application/pdf" style="display:none" onchange="subirArchivo(\''+safe+'\',this)"></label>'
+        +'</div><div>'+fhtml+'</div></div>';
+    }).join('') || '<div style="color:var(--muted)">Sin proveedores cargados. Agregá uno arriba.</div>';
+  }catch(e){ el.innerHTML='<div style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</div>'; }
+}
+async function addProveedor(){
+  const g=id=>document.getElementById(id).value.trim();
+  const nombre=g('pr-nombre'); const msg=document.getElementById('pr-msg');
+  msg.style.color='var(--muted)'; msg.textContent='';
+  if(!nombre){ msg.style.color='var(--red)'; msg.textContent='Falta el nombre.'; return; }
+  try{ const {error}=await _sb.from('proveedores').upsert({nombre, categoria:g('pr-cat')||null, detalle:g('pr-detalle')||null}, {onConflict:'nombre'}); if(error) throw error;
+    document.getElementById('pr-nombre').value=''; document.getElementById('pr-cat').value=''; document.getElementById('pr-detalle').value='';
+    msg.style.color='var(--green)'; msg.textContent='✓ Proveedor guardado'; renderProveedores();
+  }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
+}
+async function subirLogo(nombre, input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  try{
+    const path='logos/'+nombre.replace(/[^a-z0-9]/gi,'_')+'_'+Date.now()+'_'+file.name.replace(/[^a-z0-9.]/gi,'_');
+    const {error}=await _sb.storage.from('proveedores').upload(path,file,{upsert:true});
+    if(error) throw error;
+    const {data}=_sb.storage.from('proveedores').getPublicUrl(path);
+    await _sb.from('proveedores').update({logo_url:data.publicUrl}).eq('nombre',nombre);
+    renderProveedores();
+  }catch(e){ alert('No se pudo subir el logo: '+(e.message||e)); }
+}
+async function subirArchivo(nombre, input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  try{
+    const path='pdfs/'+nombre.replace(/[^a-z0-9]/gi,'_')+'_'+Date.now()+'_'+file.name.replace(/[^a-z0-9.]/gi,'_');
+    const {error}=await _sb.storage.from('proveedores').upload(path,file,{upsert:true});
+    if(error) throw error;
+    const {data}=_sb.storage.from('proveedores').getPublicUrl(path);
+    await _sb.from('proveedor_archivos').insert({proveedor:nombre, nombre_archivo:file.name, url:data.publicUrl, tipo:'pdf'});
+    renderProveedores();
+  }catch(e){ alert('No se pudo subir el PDF: '+(e.message||e)); }
+}
+async function borrarArchivo(id){
+  if(!confirm('¿Borrar este archivo?')) return;
+  try{ await _sb.from('proveedor_archivos').delete().eq('id',id); renderProveedores(); }catch(e){ alert('Error: '+(e.message||e)); }
+}
+async function borrarProveedor(id){
+  if(!confirm('¿Borrar este proveedor?')) return;
+  try{ await _sb.from('proveedores').delete().eq('id',id); renderProveedores(); }catch(e){ alert('Error: '+(e.message||e)); }
 }
 
 function applyAccessControl(){
