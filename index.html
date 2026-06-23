@@ -496,15 +496,15 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div class="g g3">
     <div class="card">
       <div class="ct">Ingresos totales / mes</div>
-      <div class="cv" style="color:var(--bright)">USD 2.088</div>
-      <div class="cs">Evg. $888 + Medplant $1.200</div>
+      <div class="cv" style="color:var(--bright)" id="hub-ingresos-tot">USD 2.088</div>
+      <div class="cs" id="hub-ingresos-sub">Evg. $888 + Medplant $1.200</div>
       <div class="badge bg">Activo</div>
     </div>
     <div class="card">
       <div class="ct">Fondo personal disp.</div>
-      <div class="cv" style="color:var(--purple)" id="hub-fondo">USD 2.932</div>
-      <div class="cs">de venta estudio jurídico</div>
-      <div class="badge bp">42% restante</div>
+      <div class="cv" style="color:var(--purple)" id="hub-fondo">USD 0</div>
+      <div class="cs">Pozo de ahorros</div>
+      <div class="badge bp">Reiniciado</div>
     </div>
     <div class="card" style="cursor:pointer;transition:all .2s;border-color:rgba(239,71,111,.3)" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(239,71,111,.3)'" onclick="go('gastos-personal',null)">
       <div class="ct">Gastos personales / mes</div>
@@ -2620,6 +2620,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div class="pg-title">💼 Fondo Personal — Estudio Jurídico</div>
   <div class="pg-sub">Venta 10% participación · $7.000 USD · 21/04/2026</div>
 
+  <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin:16px 0 8px">📜 Historial — venta estudio jurídico (fondo ya gastado · saldo actual: USD 0)</div>
   <div class="g g3">
     <div class="card">
       <div class="ct">Total Recibido</div>
@@ -2639,6 +2640,40 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <div class="cs" id="fondo-rest-uy">UY equiv. al TC</div>
       <div class="badge bg">22% restante</div>
     </div>
+  </div>
+
+  <!-- POZO DE AHORROS — MOVIMIENTOS -->
+  <div class="card mt" style="border-color:rgba(199,125,255,.45)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="stl" style="margin:0;color:var(--purple)">🐷 Pozo de ahorros — Gestión de movimientos</div>
+      <div style="text-align:right"><div style="font-size:9px;color:var(--muted);text-transform:uppercase">Saldo del pozo</div><div style="font-size:20px;font-weight:900;color:var(--bright)" id="fondo-saldo">USD 0</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Agregá, quitá y registrá movimientos del fondo. El saldo es la suma de todos los movimientos (aportes − retiros).</div>
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">➕ Cargar movimiento</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+        <input id="fdm-fecha" type="date" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+        <select id="fdm-tipo" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="ing">Aporte (+)</option><option value="egr">Retiro (−)</option></select>
+        <input id="fdm-desc" placeholder="Descripción" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+        <input id="fdm-cat" placeholder="Categoría" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+        <input id="fdm-monto" type="number" placeholder="Monto USD" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <button onclick="guardarMovFondo()" style="background:var(--purple);color:#120a1c;border:none;border-radius:7px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Agregar</button>
+        <span id="fdm-msg" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px">
+      <div><div class="ct">Desde</div><input id="fd-f-desde" type="date" onchange="renderFondoMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"></div>
+      <div><div class="ct">Hasta</div><input id="fd-f-hasta" type="date" onchange="renderFondoMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"></div>
+      <div><div class="ct">Tipo</div><select id="fd-f-tipo" onchange="renderFondoMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="">Todos</option><option value="ing">Aportes</option><option value="egr">Retiros</option></select></div>
+      <div><div class="ct">Categoría</div><select id="fd-f-cat" onchange="renderFondoMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="">Todas</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button onclick="fondoClearFilters()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">Limpiar filtros</button>
+      <button onclick="openFondoMov()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">↻ Actualizar</button>
+    </div>
+    <div id="fondo-mov" style="font-size:12px;color:var(--muted)">—</div>
   </div>
 
   <div class="card mt">
@@ -2783,7 +2818,9 @@ function go(id,el){
   if(el) el.classList.add('on');
   document.getElementById('hdr-title').textContent=titles[id]||id;
   if(id==='gastos-personal') renderGastosPersonal();
+  if(id==='dash' && typeof updateHubResumen==='function') updateHubResumen();
   if(id==='deudas') renderDeudas();
+  if(id==='fondos'){ if(typeof renderFondo==='function') renderFondo(); openFondoMov(); }
   if(id==='posnet') renderPosnet();
   if(id==='evergreen' && typeof renderProductosInline === 'function') renderProductosInline(false);
   if(id==='evergreen') renderEvergreenKPI();
@@ -3289,13 +3326,7 @@ function renderTxSummary() {
   document.getElementById('tx-sum-usd').textContent = 'USD ' + Math.round(negT / FX.usd).toLocaleString();
   document.getElementById('tx-count').textContent = TRANSFERS.length + ' transferencias';
 
-  // KPI hub — Gastos personales del mes (desde TRANSFERS tipo Personal)
-  const hubGP  = document.getElementById('hub-gasto-personal');
-  const hubSub = document.getElementById('hub-gasto-personal-sub');
-  const hubBdg = document.getElementById('hub-gasto-personal-badge');
-  if (hubGP) hubGP.textContent = fUY(perT);
-  if (hubSub) hubSub.textContent = per.length + ' movimiento' + (per.length !== 1 ? 's' : '') + ' personal' + (per.length !== 1 ? 'es' : '');
-  if (hubBdg) hubBdg.textContent = '≈ USD ' + Math.round(perT / FX.usd).toLocaleString();
+  // (Gastos personales del hub ahora los calcula updateHubResumen desde mov_personales)
 
   // Desglose por sub+cat
   const bySub = {};
@@ -4324,6 +4355,87 @@ async function doLogout(){
 }
 // ═══════════════ DATOS EN VIVO (data.json desde Google Sheets) ═══════════════
 window.LIVE = null;
+var _fdRows=null;
+async function openFondoMov(){
+  const fE=document.getElementById('fdm-fecha'); if(fE && !fE.value){ fE.value=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10); }
+  const el=document.getElementById('fondo-mov'); if(el) el.innerHTML='<div style="color:var(--muted)">Cargando…</div>';
+  try{
+    const {data}=await _sb.from('mov_personales').select('id,fecha,descripcion,monto,categoria,source').eq('caja','FONDO').order('fecha',{ascending:false}).limit(1000);
+    _fdRows=data||[];
+    const sel=document.getElementById('fd-f-cat');
+    if(sel){ const cur=sel.value; const cats=[...new Set(_fdRows.map(r=>r.categoria||'Otro'))].sort(); sel.innerHTML='<option value="">Todas</option>'+cats.map(c=>'<option value="'+c+'">'+c+'</option>').join(''); sel.value=cur; }
+  }catch(e){ const el=document.getElementById('fondo-mov'); if(el) el.innerHTML='<div style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</div>'; return; }
+  renderFondoMov();
+}
+function fondoClearFilters(){ ['fd-f-desde','fd-f-hasta','fd-f-tipo','fd-f-cat'].forEach(id=>{const e=document.getElementById(id); if(e)e.value='';}); renderFondoMov(); }
+function fondoSumSel(){ const f=v=>'USD '+Math.round(+v||0).toLocaleString('es-UY'); const chk=[...document.querySelectorAll('.fd-chk:checked')]; const tot=chk.reduce((a,c)=>a+(+c.dataset.monto||0),0); const out=document.getElementById('fd-selsum'); if(out) out.textContent=chk.length?(chk.length+' sel. · neto '+f(tot)):'Tocá filas para sumarlas'; }
+async function guardarMovFondo(){
+  const g=id=>document.getElementById(id);
+  const fecha=g('fdm-fecha').value, desc=g('fdm-desc').value.trim(), cat=g('fdm-cat').value.trim();
+  const tipo=g('fdm-tipo').value; let monto=parseFloat(g('fdm-monto').value)||0; const msg=g('fdm-msg');
+  if(!fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
+  if(!monto){ msg.style.color='var(--red)'; msg.textContent='Falta el monto.'; return; }
+  monto=Math.abs(monto)*(tipo==='egr'?-1:1);
+  const row={ caja:'FONDO', fecha, descripcion:desc||(tipo==='egr'?'Retiro':'Aporte'), monto, tipo:(tipo==='egr'?'egreso':'ingreso'), categoria:cat||'Ahorro', source:'manual' };
+  try{ const {error}=await _sb.from('mov_personales').insert(row); if(error) throw error; g('fdm-desc').value=''; g('fdm-monto').value=''; g('fdm-cat').value=''; msg.style.color='var(--green)'; msg.textContent='✓ Movimiento cargado'; await openFondoMov(); }
+  catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
+}
+async function borrarMovFondo(id){ if(!confirm('¿Borrar este movimiento?')) return; try{ const {error}=await _sb.from('mov_personales').delete().eq('id',id); if(error) throw error; await openFondoMov(); }catch(e){ alert('No se pudo borrar: '+(e.message||e)); } }
+function renderFondoMov(){
+  const el=document.getElementById('fondo-mov'); if(!el) return;
+  if(_fdRows===null){ openFondoMov(); return; }
+  const f=v=>(v<0?'−':'')+'USD '+Math.abs(Math.round(+v||0)).toLocaleString('es-UY');
+  const desde=(document.getElementById('fd-f-desde')||{}).value||'';
+  const hasta=(document.getElementById('fd-f-hasta')||{}).value||'';
+  const tipo=(document.getElementById('fd-f-tipo')||{}).value||'';
+  const cat=(document.getElementById('fd-f-cat')||{}).value||'';
+  const saldo=_fdRows.reduce((a,r)=>a+(+r.monto||0),0);
+  const sEl=document.getElementById('fondo-saldo'); if(sEl){ sEl.textContent=f(saldo); sEl.style.color=saldo<0?'var(--red)':'var(--bright)'; }
+  const hb=document.getElementById('hub-fondo'); if(hb){ hb.textContent=f(saldo); }
+  let rows=_fdRows.filter(r=>{ if(desde&&(r.fecha||'')<desde)return false; if(hasta&&(r.fecha||'')>hasta)return false; if(tipo==='ing'&&(+r.monto)<=0)return false; if(tipo==='egr'&&(+r.monto)>=0)return false; if(cat&&(r.categoria||'Otro')!==cat)return false; return true; });
+  const ing=rows.filter(r=>(+r.monto)>0).reduce((a,r)=>a+(+r.monto||0),0);
+  const egr=rows.filter(r=>(+r.monto)<0).reduce((a,r)=>a+(+r.monto||0),0);
+  const cS='background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:110px';
+  let html='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Aportes</div><div style="font-weight:800;color:var(--green)">'+f(ing)+'</div></div>'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Retiros</div><div style="font-weight:800;color:var(--red)">'+f(Math.abs(egr))+'</div></div>'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Neto (filtro)</div><div style="font-weight:800;color:var(--bright)">'+f(ing+egr)+'</div></div>'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Movimientos</div><div style="font-weight:800">'+rows.length+'</div></div></div>';
+  html+='<div style="font-size:11px;color:var(--purple);font-weight:700;margin-bottom:8px" id="fd-selsum">Tocá filas para sumarlas</div>';
+  if(rows.length){
+    html+='<div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="padding:4px 6px"></th><th style="text-align:left;padding:4px 8px">Fecha</th><th style="text-align:left;padding:4px 8px">Descripción</th><th style="text-align:left;padding:4px 8px">Categoría</th><th style="text-align:right;padding:4px 8px">Monto</th><th style="padding:4px 6px"></th></tr></thead><tbody>';
+    html+=rows.map(r=>{ const del=r.id?'<span onclick="borrarMovFondo('+r.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span>':''; return '<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px;text-align:center"><input type="checkbox" class="fd-chk" data-monto="'+(+r.monto||0)+'" onchange="fondoSumSel()"></td><td style="padding:4px 8px">'+r.fecha+'</td><td style="padding:4px 8px">'+(r.descripcion||'')+'</td><td style="padding:4px 8px;color:var(--muted)">'+(r.categoria||'')+'</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:'+((+r.monto)<0?'var(--red)':'var(--green)')+'">'+f(r.monto)+'</td><td style="padding:4px 6px;text-align:center">'+del+'</td></tr>'; }).join('');
+    html+='</tbody></table></div>';
+  } else { html+='<div style="color:var(--muted)">Sin movimientos para este filtro.</div>'; }
+  el.innerHTML=html;
+}
+async function updateHubResumen(){
+  try{
+    const meta=(window.LIVE&&window.LIVE.meta)||{};
+    const fxu=(meta.fx&&meta.fx.usd)||(typeof FX!=='undefined'?FX.usd:40);
+    const fxa=(meta.fx&&meta.fx.ars)||(typeof FX!=='undefined'?FX.ars:1450);
+    // Ingresos totales = utilidad Evergreen (en vivo) + Medplant USD 1.200
+    const utilUY=(M.u||0)-(window._prexMes||0);
+    const evgUSD=Math.round(utilUY/fxu);
+    const MEDPLANT=1200;
+    const c1=document.getElementById('hub-ingresos-tot'); if(c1) c1.textContent='USD '+(evgUSD+MEDPLANT).toLocaleString('es-UY');
+    const c1s=document.getElementById('hub-ingresos-sub'); if(c1s) c1s.textContent='Evg. $'+evgUSD.toLocaleString('es-UY')+' + Medplant $1.200';
+    // Gastos personales del mes = egresos de TODAS las cajas personales (no FONDO, no Evergreen)
+    const hoy=meta.hoy||new Date().toISOString().slice(0,10);
+    const m1=hoy.slice(0,8)+'01';
+    const CAJA_MON={'MP AR':'ARS','Prex AR':'ARS','Cash AR':'ARS','Cash UY':'UY','Prex UY':'UY'};
+    let totUSD=0,n=0;
+    try{ const {data}=await _sb.from('mov_personales').select('monto,caja').neq('caja','FONDO').gte('fecha',m1).lte('fecha',hoy);
+      (data||[]).forEach(r=>{ if((+r.monto)<0){ const mon=CAJA_MON[r.caja]||'ARS'; const ab=Math.abs(+r.monto); totUSD += mon==='USD'?ab : mon==='ARS'?ab/fxa : ab/fxu; n++; } });
+    }catch(e){}
+    const gp=document.getElementById('hub-gasto-personal');
+    const gps=document.getElementById('hub-gasto-personal-sub');
+    const gpb=document.getElementById('hub-gasto-personal-badge');
+    if(gp) gp.textContent='USD '+Math.round(totUSD).toLocaleString('es-UY');
+    if(gps) gps.textContent=n+' movimiento'+(n!==1?'s':'')+' · todas las cajas';
+    if(gpb) gpb.textContent='mes en curso';
+  }catch(e){}
+}
 async function loadLiveData(){
   try {
     let D = null;
@@ -4339,7 +4451,7 @@ async function loadLiveData(){
       M.u = D.evergreen.utilidadMes; M.usd = D.evergreen.utilidadUSD;
     }
     if (Array.isArray(D.hist) && D.hist.length){ HIST.splice(0, HIST.length); D.hist.forEach(h=>HIST.push(h)); }
-    applyLiveLabels(D); renderLiveBanner(D); applyLiveKPIs(); loadPrexMes(); loadPrexTotal(); loadPosnetAcred(); loadMpMov(); renderEvergreenKPI();
+    applyLiveLabels(D); renderLiveBanner(D); applyLiveKPIs(); loadPrexMes(); loadPrexTotal(); loadPosnetAcred(); loadMpMov(); renderEvergreenKPI().then(()=>{ if(typeof updateHubResumen==='function') updateHubResumen(); });
   } catch(e){ console.warn('loadLiveData', e); }
 }
 async function renderEvergreenKPI(){
@@ -6419,68 +6531,76 @@ function showEvSub(tipo, card) {
 }
 
 // ═══ GASTOS PERSONALES — submódulo ═══
-function renderGastosPersonal() {
+async function renderGastosPersonal() {
   const tbody = document.getElementById('gp-tbody');
   if (!tbody) return;
+  const fE=document.getElementById('gpm-fecha'); if(fE && !fE.value){ fE.value=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10); }
+  const CAJA_MON={'MP AR':'ARS','Prex AR':'ARS','Cash AR':'ARS','Cash UY':'UY','Prex UY':'UY'};
   const toUY = t => t.moneda === 'USD' ? t.monto * FX.usd : t.moneda === 'ARS' ? t.monto / FX.ars * FX.usd : t.monto;
   const fUY  = v => '$' + Math.round(v).toLocaleString('es-UY');
-  const fOrig = t => {
-    if (t.moneda === 'USD') return 'USD ' + t.monto.toLocaleString('es-UY', {minimumFractionDigits:2});
-    if (t.moneda === 'ARS') return '$' + t.monto.toLocaleString('es-UY') + ' ARS';
-    return '$' + t.monto.toLocaleString('es-UY') + ' UY';
-  };
-
-  const per = TRANSFERS.filter(t => t.tipo === 'Personal').sort((a,b) => b.fecha.localeCompare(a.fecha));
+  const fOrig = t => t.moneda==='USD' ? 'USD '+t.monto.toLocaleString('es-UY',{minimumFractionDigits:2}) : t.moneda==='ARS' ? '$'+t.monto.toLocaleString('es-UY')+' ARS' : '$'+t.monto.toLocaleString('es-UY')+' UY';
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  const m1=hoy.slice(0,8)+'01';
+  let data=[];
+  try{ const r=await _sb.from('mov_personales').select('id,fecha,descripcion,monto,categoria,caja').neq('caja','FONDO').gte('fecha',m1).lte('fecha',hoy).order('fecha',{ascending:false}); data=r.data||[]; }
+  catch(e){ tbody.innerHTML='<tr><td colspan="6" style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</td></tr>'; return; }
+  const per = data.filter(r=>(+r.monto)<0).map(r=>({id:r.id, fecha:r.fecha, benef:r.descripcion||'-', cat:r.categoria||'Otro', caja:r.caja||'', monto:Math.abs(+r.monto||0), moneda:CAJA_MON[r.caja]||'ARS'}));
   const totalUY = per.reduce((a,t) => a + toUY(t), 0);
-
-  // KPIs por categoría
   const byCat = {};
-  per.forEach(t => {
-    const k = t.cat;
-    if (!byCat[k]) byCat[k] = 0;
-    byCat[k] += toUY(t);
-  });
+  per.forEach(t => { byCat[t.cat]=(byCat[t.cat]||0)+toUY(t); });
   const topCats = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
-
-  // Resumen por categoría
   const catEl = document.getElementById('gp-cat-breakdown');
   if (catEl) {
     catEl.innerHTML = topCats.map(([cat, val]) => {
       const pct = totalUY > 0 ? (val/totalUY*100).toFixed(0) : 0;
       return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1;font-size:12px;font-weight:600">${cat}</div>
-        <div style="width:80px;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:var(--red);border-radius:3px"></div>
-        </div>
+        <div style="width:80px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--red);border-radius:3px"></div></div>
         <div style="font-size:12px;color:var(--red);font-weight:700;min-width:80px;text-align:right">${fUY(val)}</div>
         <div style="font-size:11px;color:var(--muted);min-width:30px;text-align:right">${pct}%</div>
       </div>`;
-    }).join('');
+    }).join('') || '<div style="color:var(--muted);font-size:12px">Sin gastos cargados este mes.</div>';
   }
-
-  // KPIs
-  const el1 = document.getElementById('gp-total');
-  const el2 = document.getElementById('gp-usd');
-  const el3 = document.getElementById('gp-count');
-  if (el1) el1.textContent = fUY(totalUY);
-  if (el2) el2.textContent = 'USD ' + Math.round(totalUY / FX.usd).toFixed(0);
-  if (el3) el3.textContent = per.length + ' movimientos';
-  const mayor = per.reduce((a,t) => toUY(t) > toUY(a) ? t : a, per[0]);
-  const elM1 = document.getElementById('gp-mayor');
-  const elM2 = document.getElementById('gp-mayor-cat');
-  if (mayor && elM1) { elM1.textContent = fOrig(mayor); elM2.textContent = mayor.benef + ' · ' + mayor.cat; }
-
-  // Tabla detalle
+  const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  set('gp-total', fUY(totalUY));
+  set('gp-usd', 'USD ' + Math.round(totalUY / FX.usd).toFixed(0));
+  set('gp-count', per.length + ' movimientos');
+  const mayor = per.length ? per.reduce((a,t) => toUY(t) > toUY(a) ? t : a, per[0]) : null;
+  if (mayor){ set('gp-mayor', fOrig(mayor)); set('gp-mayor-cat', mayor.benef + ' · ' + mayor.cat); }
+  else { set('gp-mayor','—'); set('gp-mayor-cat','—'); }
   tbody.innerHTML = per.map(t => {
     const uy = toUY(t);
+    const del = t.id ? '<span onclick="borrarGastoPersonal('+t.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span>' : '';
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${t.fecha}</td>
       <td style="font-weight:600">${t.benef}</td>
+      <td style="font-size:10px;color:var(--blue)">${t.caja}</td>
       <td style="font-size:11px;color:var(--muted)">${t.cat}</td>
       <td class="tr mono" style="color:var(--red);font-weight:700">${fOrig(t)}</td>
-      <td class="tr" style="font-size:11px;color:var(--muted)">${t.moneda !== 'UY' ? '≈ '+fUY(uy) : ''}</td>
+      <td class="tr" style="font-size:11px;color:var(--muted)">${t.moneda !== 'UY' ? '≈ '+fUY(uy) : ''} ${del}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Sin gastos personales</td></tr>`;
+  }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Sin gastos personales este mes</td></tr>`;
+}
+async function guardarGastoPersonal(){
+  const g=id=>document.getElementById(id);
+  const fecha=g('gpm-fecha').value, caja=g('gpm-caja').value, desc=g('gpm-desc').value.trim(), cat=g('gpm-cat').value.trim();
+  const tipo=g('gpm-tipo').value; let monto=parseFloat(g('gpm-monto').value)||0; const msg=g('gpm-msg');
+  if(!fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
+  if(!monto){ msg.style.color='var(--red)'; msg.textContent='Falta el monto.'; return; }
+  monto=Math.abs(monto)*(tipo==='egr'?-1:1);
+  const row={ caja, fecha, descripcion:desc||(tipo==='egr'?'Gasto':'Ingreso'), monto, tipo:(tipo==='egr'?'egreso':'ingreso'), categoria:cat||'Personal', source:'manual' };
+  try{ const {error}=await _sb.from('mov_personales').insert(row); if(error) throw error;
+    g('gpm-desc').value=''; g('gpm-monto').value=''; g('gpm-cat').value='';
+    msg.style.color='var(--green)'; msg.textContent='✓ Cargado';
+    renderGastosPersonal(); if(typeof updateHubResumen==='function') updateHubResumen();
+    if(caja==='MP AR' && typeof refreshPrexCaja==='function') refreshPrexCaja();
+  }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
+}
+async function borrarGastoPersonal(id){
+  if(!confirm('¿Borrar este movimiento?')) return;
+  try{ const {error}=await _sb.from('mov_personales').delete().eq('id',id); if(error) throw error;
+    renderGastosPersonal(); if(typeof updateHubResumen==='function') updateHubResumen();
+  }catch(e){ alert('No se pudo borrar: '+(e.message||e)); }
 }
 
 </script>
@@ -6490,7 +6610,24 @@ function renderGastosPersonal() {
     <button onclick="go('dash',null)" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer">← Hub</button>
     <div class="pg-title" style="margin:0">💸 Gastos Personales — Abril 2026</div>
   </div>
-  <div class="pg-sub">Todos los movimientos personales del mes · desde comprobantes Prex</div>
+  <div class="pg-sub">Todos los movimientos personales del mes · todas las cajas (no Evergreen)</div>
+
+  <div class="card mt" style="border-color:rgba(239,71,111,.3)">
+    <div class="stl">➕ Cargar gasto / movimiento personal</div>
+    <div style="font-size:11px;color:var(--muted);margin:4px 0 10px">Compras, transferencias y pagos de tus cajas personales (no gastos fijos de Evergreen Culture). Incluí los fijos de tu casa de Buenos Aires y la chacra de Uruguay.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+      <input id="gpm-fecha" type="date" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+      <select id="gpm-caja" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="MP AR">MercadoPago AR</option><option value="Prex AR">Prex AR</option><option value="Cash AR">Cash AR</option><option value="Prex UY">Prex UY</option><option value="Cash UY">Cash UY</option></select>
+      <select id="gpm-tipo" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="egr">Gasto (−)</option><option value="ing">Ingreso (+)</option></select>
+      <input id="gpm-desc" placeholder="Descripción / destinatario" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+      <input id="gpm-cat" placeholder="Categoría" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+      <input id="gpm-monto" type="number" placeholder="Monto" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <button onclick="guardarGastoPersonal()" style="background:var(--red);color:#fff;border:none;border-radius:7px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Agregar</button>
+      <span id="gpm-msg" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
 
   <!-- KPIs -->
   <div class="g g3 mt">
@@ -6519,6 +6656,7 @@ function renderGastosPersonal() {
         <thead><tr>
           <th>Fecha</th>
           <th>Destinatario</th>
+          <th>Caja</th>
           <th>Categoría</th>
           <th class="tr">Monto</th>
           <th class="tr">≈ UY</th>
