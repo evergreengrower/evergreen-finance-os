@@ -2695,6 +2695,7 @@ function go(id,el){
   if(id==='deudas') renderDeudas();
   if(id==='posnet') renderPosnet();
   if(id==='evergreen' && typeof renderProductosInline === 'function') renderProductosInline(false);
+  if(id==='evergreen') renderEvergreenKPI();
   setTimeout(()=>renderCharts(id),60);
 }
 function goBack(){ go(window._prevSec||'dash', null); }
@@ -4171,8 +4172,34 @@ async function loadLiveData(){
       M.u = D.evergreen.utilidadMes; M.usd = D.evergreen.utilidadUSD;
     }
     if (Array.isArray(D.hist) && D.hist.length){ HIST.splice(0, HIST.length); D.hist.forEach(h=>HIST.push(h)); }
-    applyLiveLabels(D); renderLiveBanner(D); applyLiveKPIs(); loadPrexMes();
+    applyLiveLabels(D); renderLiveBanner(D); applyLiveKPIs(); loadPrexMes(); renderEvergreenKPI();
   } catch(e){ console.warn('loadLiveData', e); }
+}
+async function renderEvergreenKPI(){
+  if(typeof _sb==='undefined' || !_sb) return;
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  const m1=hoy.slice(0,8)+'01';
+  let v=0,g=0,j=0,prex=0,dias=0;
+  try{
+    const {data}=await _sb.from('daily_cashflow').select('fecha,total_ventas,gastos,jornales').gte('fecha',m1).lte('fecha',hoy);
+    const rows=data||[];
+    v=rows.reduce((a,r)=>a+(+r.total_ventas||0),0);
+    g=rows.reduce((a,r)=>a+(+r.gastos||0),0);
+    j=rows.reduce((a,r)=>a+(+r.jornales||0),0);
+    dias=new Set(rows.map(r=>r.fecha)).size;
+  }catch(e){ return; }
+  try{ const {data}=await _sb.from('prex_payments').select('monto').gte('fecha',m1).lte('fecha',hoy); prex=(data||[]).reduce((a,r)=>a+(+r.monto||0),0); }catch(e){}
+  const fxu=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.fx&&window.LIVE.meta.fx.usd)||(typeof FX!=='undefined'?FX.usd:39);
+  const egBase=g+j;
+  if(!window.LIVE) window.LIVE={meta:{},evergreen:{}};
+  if(!window.LIVE.evergreen) window.LIVE.evergreen={};
+  M.v=v; M.gv=g; M.s=j; M.gf=0; M.u=v-egBase; M.usd=Math.round((v-egBase)/fxu);
+  const E=window.LIVE.evergreen;
+  E.ventasMes=v; E.gastosVarMes=g; E.sueldos=j; E.gastosFijos=0; E.egresosMes=egBase; E.utilidadMes=v-egBase; E.utilidadUSD=Math.round((v-egBase)/fxu); E.diasVenta=dias;
+  window._prexMes=prex;
+  if(typeof applyLiveKPIs==='function') applyLiveKPIs();
+  const kv=document.getElementById('kpi-ventas');
+  if(kv && kv.nextElementSibling && kv.nextElementSibling.classList.contains('cs')) kv.nextElementSibling.textContent=dias+' días activos';
 }
 function applyLiveKPIs(){
   if (!window.LIVE || !window.LIVE.evergreen) return;
@@ -4377,7 +4404,7 @@ async function guardarCaja(){
   if(!row.fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
   btn.disabled=true; const ot=btn.textContent; btn.textContent='Guardando…';
   try{ const {error}=await _sb.from('daily_cashflow').upsert(row,{onConflict:'fecha,turno'}); if(error) throw error;
-    msg.style.color='var(--green)'; msg.textContent='✓ Cierre de caja guardado ('+row.fecha+')'; renderCajasRecientes();
+    msg.style.color='var(--green)'; msg.textContent='✓ Cierre de caja guardado ('+row.fecha+')'; renderCajasRecientes(); renderEvergreenKPI();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
 }
@@ -4426,7 +4453,7 @@ async function guardarPrex(){
   try{ const {error}=await _sb.from('prex_payments').insert(row); if(error) throw error;
     msg.style.color='var(--green)'; msg.textContent='✓ Pago Prex guardado: $'+row.monto.toLocaleString('es-UY');
     document.getElementById('cp-prov').value=''; document.getElementById('cp-concepto').value=''; document.getElementById('cp-monto').value='';
-    await loadPrexMes(); renderPrexMes();
+    await loadPrexMes(); renderPrexMes(); renderEvergreenKPI();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
 }
