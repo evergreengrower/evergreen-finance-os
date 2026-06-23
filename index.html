@@ -2019,6 +2019,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
           <button onclick="openCajaForm('prex_uy','ingreso')" style="flex:1;background:rgba(82,183,136,.2);color:var(--green);border:1px solid rgba(82,183,136,.4);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">+ Ingresar</button>
           <button onclick="openCajaForm('prex_uy','egreso')"  style="flex:1;background:rgba(239,71,111,.12);color:var(--red);border:1px solid rgba(239,71,111,.3);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">− Retirar</button>
         </div>
+        <button onclick="openPrexModal()" style="width:100%;margin-bottom:5px;background:rgba(99,179,237,.08);color:var(--blue);border:1px solid rgba(99,179,237,.3);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">📒 Ver movimientos</button>
         <button onclick="ajustarSaldoPrex()" style="width:100%;margin-bottom:5px;background:rgba(99,179,237,.12);color:var(--blue);border:1px solid rgba(99,179,237,.35);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">✏️ Ajustar saldo real</button>
         <button onclick="openGonzaloModal()" style="width:100%;background:rgba(0,180,120,.1);color:#00b478;border:1px solid rgba(0,180,120,.3);border-radius:7px;padding:5px;font-size:10px;font-weight:700;cursor:pointer">⚡ Canal Gonzalo → MP AR (−20 USD)</button>
       </div>
@@ -2105,6 +2106,26 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
         </div>
       </div>
       <div id="mp-personales" style="font-size:12px;color:var(--muted)">—</div>
+    </div>
+
+    <!-- MODAL PREX UY — MOVIMIENTOS -->
+    <div id="prex-modal" class="card mt" style="display:none;border-color:rgba(99,179,237,.5);background:rgba(99,179,237,.05)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="stl" style="color:var(--blue);margin:0">💳 Prex UY — Movimientos</div>
+        <button onclick="closePrexModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Entradas de Posnet (ventas con tarjeta acreditadas), pagos Prex a proveedores y movimientos personales de esta caja, desde la fecha de corte. Para cargar usá Pago Prex / Facturas / Gastos Personales.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px">
+        <div><div class="ct">Desde</div><input id="px-f-desde" type="date" onchange="renderPrexMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"></div>
+        <div><div class="ct">Hasta</div><input id="px-f-hasta" type="date" onchange="renderPrexMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"></div>
+        <div><div class="ct">Flujo</div><select id="px-f-tipo" onchange="renderPrexMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="">Todos</option><option value="ing">Entradas</option><option value="egr">Salidas</option></select></div>
+        <div><div class="ct">Tipo</div><select id="px-f-cat" onchange="renderPrexMov()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px;font-size:13px"><option value="">Todos</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button onclick="prexClearFilters()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">Limpiar filtros</button>
+        <button onclick="openPrexModal()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">↻ Actualizar</button>
+      </div>
+      <div id="prex-mov" style="font-size:12px;color:var(--muted)">—</div>
     </div>
 
     <!-- MODAL CANAL GONZALO -->
@@ -4411,6 +4432,55 @@ function renderFondoMov(){
   if(rows.length){
     html+='<div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="padding:4px 6px"></th><th style="text-align:left;padding:4px 8px">Fecha</th><th style="text-align:left;padding:4px 8px">Descripción</th><th style="text-align:left;padding:4px 8px">Categoría</th><th style="text-align:right;padding:4px 8px">Monto</th><th style="padding:4px 6px"></th></tr></thead><tbody>';
     html+=rows.map(r=>{ const del=r.id?'<span onclick="borrarMovFondo('+r.id+')" style="cursor:pointer;color:var(--muted)" title="Borrar">✕</span>':''; return '<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px;text-align:center"><input type="checkbox" class="fd-chk" data-monto="'+(+r.monto||0)+'" onchange="fondoSumSel()"></td><td style="padding:4px 8px">'+r.fecha+'</td><td style="padding:4px 8px">'+(r.descripcion||'')+'</td><td style="padding:4px 8px;color:var(--muted)">'+(r.categoria||'')+'</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:'+((+r.monto)<0?'var(--red)':'var(--green)')+'">'+f(r.monto)+'</td><td style="padding:4px 6px;text-align:center">'+del+'</td></tr>'; }).join('');
+    html+='</tbody></table></div>';
+  } else { html+='<div style="color:var(--muted)">Sin movimientos para este filtro.</div>'; }
+  el.innerHTML=html;
+}
+var _pxRows=null;
+function closePrexModal(){ const m=document.getElementById('prex-modal'); if(m) m.style.display='none'; }
+async function openPrexModal(){
+  const m=document.getElementById('prex-modal'); if(m) m.style.display='';
+  const el=document.getElementById('prex-mov'); if(el) el.innerHTML='<div style="color:var(--muted)">Cargando…</div>';
+  const rows=[];
+  try{
+    let q1=_sb.from('prex_payments').select('fecha,proveedor,concepto,monto'); if(PREX_CORTE) q1=q1.gte('fecha',PREX_CORTE);
+    const {data:pp}=await q1; (pp||[]).forEach(r=>rows.push({fecha:r.fecha, desc:(r.proveedor||r.concepto||'Pago'), cat:'Pago Prex', monto:-(+r.monto||0)}));
+    let q2=_sb.from('daily_cashflow').select('fecha,turno,tarjeta'); if(PREX_CORTE) q2=q2.gte('fecha',PREX_CORTE);
+    const {data:cf}=await q2; const now=new Date();
+    (cf||[]).forEach(r=>{ const t=+r.tarjeta||0; if(t<=0) return; const turno=(r.turno||'').toLowerCase(); const esM=(turno.includes('mañana')||turno.includes('manana'))&&!turno.includes('tarde'); const pr=(r.fecha||'').split('-').map(Number); if(pr.length<3)return; const dow=new Date(pr[0],pr[1]-1,pr[2]).getDay(); const acred=esM?new Date(pr[0],pr[1]-1,pr[2],(dow===1?17:15),0,0):new Date(pr[0],pr[1]-1,pr[2],22,0,0); if(acred<=now){ rows.push({fecha:r.fecha, desc:'Posnet '+(r.turno||''), cat:'Posnet', monto:+(t*(1-0.0134))}); } });
+    let q3=_sb.from('mov_personales').select('fecha,descripcion,monto,categoria').eq('caja','Prex UY'); if(PREX_CORTE) q3=q3.gte('fecha',PREX_CORTE);
+    const {data:mvp}=await q3; (mvp||[]).forEach(r=>rows.push({fecha:r.fecha, desc:r.descripcion||'-', cat:r.categoria||'Personal', monto:+r.monto||0}));
+  }catch(e){ if(el) el.innerHTML='<div style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</div>'; return; }
+  try{ (CAJAS_MOV||[]).filter(x=>x.moneda==='prex_uy' && (+x.monto)).forEach(x=>rows.push({fecha:x.fecha, desc:x.desc||'Movimiento', cat:'Manual', monto:+x.monto||0})); }catch(e){}
+  rows.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  _pxRows=rows;
+  const sel=document.getElementById('px-f-cat'); if(sel){ const cur=sel.value; const cats=[...new Set(rows.map(r=>r.cat||'Otro'))].sort(); sel.innerHTML='<option value="">Todos</option>'+cats.map(c=>'<option value="'+c+'">'+c+'</option>').join(''); sel.value=cur; }
+  renderPrexMov();
+  if(m) m.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function prexClearFilters(){ ['px-f-desde','px-f-hasta','px-f-tipo','px-f-cat'].forEach(id=>{const e=document.getElementById(id); if(e)e.value='';}); renderPrexMov(); }
+function pxSumSel(){ const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY'); const chk=[...document.querySelectorAll('.px-chk:checked')]; const tot=chk.reduce((a,c)=>a+(+c.dataset.monto||0),0); const out=document.getElementById('px-selsum'); if(out) out.textContent=chk.length?(chk.length+' sel. · neto '+f(tot)):'Tocá filas para sumarlas'; }
+function renderPrexMov(){
+  const el=document.getElementById('prex-mov'); if(!el) return;
+  if(_pxRows===null){ openPrexModal(); return; }
+  const f=v=>(v<0?'−':'')+'$'+Math.abs(Math.round(+v||0)).toLocaleString('es-UY');
+  const desde=(document.getElementById('px-f-desde')||{}).value||'';
+  const hasta=(document.getElementById('px-f-hasta')||{}).value||'';
+  const tipo=(document.getElementById('px-f-tipo')||{}).value||'';
+  const cat=(document.getElementById('px-f-cat')||{}).value||'';
+  let rows=_pxRows.filter(r=>{ if(desde&&(r.fecha||'')<desde)return false; if(hasta&&(r.fecha||'')>hasta)return false; if(tipo==='ing'&&(+r.monto)<=0)return false; if(tipo==='egr'&&(+r.monto)>=0)return false; if(cat&&(r.cat||'Otro')!==cat)return false; return true; });
+  const ing=rows.filter(r=>(+r.monto)>0).reduce((a,r)=>a+(+r.monto||0),0);
+  const egr=rows.filter(r=>(+r.monto)<0).reduce((a,r)=>a+(+r.monto||0),0);
+  const cS='background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:110px';
+  let html='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Entradas (Posnet)</div><div style="font-weight:800;color:var(--green)">'+f(ing)+'</div></div>'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Salidas (pagos)</div><div style="font-weight:800;color:var(--red)">'+f(Math.abs(egr))+'</div></div>'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Neto (filtro)</div><div style="font-weight:800;color:var(--bright)">'+f(ing+egr)+'</div></div>'
+    +'<div style="'+cS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Movimientos</div><div style="font-weight:800">'+rows.length+'</div></div></div>';
+  html+='<div style="font-size:11px;color:var(--blue);font-weight:700;margin-bottom:8px" id="px-selsum">Tocá filas para sumarlas</div>';
+  if(rows.length){
+    html+='<div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="padding:4px 6px"></th><th style="text-align:left;padding:4px 8px">Fecha</th><th style="text-align:left;padding:4px 8px">Detalle</th><th style="text-align:left;padding:4px 8px">Tipo</th><th style="text-align:right;padding:4px 8px">Monto</th></tr></thead><tbody>';
+    html+=rows.map(r=>'<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px;text-align:center"><input type="checkbox" class="px-chk" data-monto="'+(+r.monto||0)+'" onchange="pxSumSel()"></td><td style="padding:4px 8px">'+r.fecha+'</td><td style="padding:4px 8px">'+(r.desc||'')+'</td><td style="padding:4px 8px;color:var(--muted)">'+(r.cat||'')+'</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:'+((+r.monto)<0?'var(--red)':'var(--green)')+'">'+f(r.monto)+'</td></tr>').join('');
     html+='</tbody></table></div>';
   } else { html+='<div style="color:var(--muted)">Sin movimientos para este filtro.</div>'; }
   el.innerHTML=html;
