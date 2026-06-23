@@ -617,8 +617,9 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div id="carga-form-caja" class="card" style="border-color:rgba(76,201,240,.45);max-width:780px">
     <div class="stl" style="margin-bottom:6px">Cierre de caja del día</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Igual que la hoja CAJAS DIARIAS del Excel — un cierre por día. El total y el efectivo final se calculan solos.</div>
-    <div class="g g3" style="gap:10px">
+    <div class="g g4" style="gap:10px">
       <div><label class="cg-l">Fecha</label><input type="date" id="cj-fecha" class="cg-i"></div>
+      <div><label class="cg-l">Turno</label><select id="cj-turno" class="cg-i"><option value="mañana">Mañana</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
       <div><label class="cg-l">Colab</label><input type="text" id="cj-colab" class="cg-i" placeholder="Nombre"></div>
       <div><label class="cg-l">Caja inicial</label><input type="number" id="cj-ini" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
     </div>
@@ -4313,12 +4314,12 @@ async function renderCajasRecientes(){
   const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
   el.style.color='var(--muted)'; el.textContent='Cargando…';
   try{
-    const {data}=await _sb.from('daily_cashflow').select('fecha,colab,total_ventas,efectivo,tarjeta,gastos,jornales,tot_caja_efectivo_final').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('fecha',{ascending:false}).limit(400);
+    const {data}=await _sb.from('daily_cashflow').select('fecha,turno,colab,caja_inicial,efectivo,tarjeta,total_ventas,gastos,jornales,a_caja_grande,tot_caja_efectivo_final').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('fecha',{ascending:false}).order('turno',{ascending:true}).limit(400);
     const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
-    let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Cajas (últimos 30 días)</div>';
+    let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Cajas por turno (últimos 30 días)</div>';
     if(rows.length){
-      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Colab</th><th style="text-align:right;padding:3px 6px">Ventas</th><th style="text-align:right;padding:3px 6px">Efvo</th><th style="text-align:right;padding:3px 6px">Tarj</th><th style="text-align:right;padding:3px 6px">Gastos</th><th style="text-align:right;padding:3px 6px">Jorn</th><th style="text-align:right;padding:3px 6px">Efvo final</th></tr></thead><tbody>';
-      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.colab||'-')+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+f(r.total_ventas)+'</td><td style="padding:3px 6px;text-align:right">'+f(r.efectivo)+'</td><td style="padding:3px 6px;text-align:right">'+f(r.tarjeta)+'</td><td style="padding:3px 6px;text-align:right;color:var(--red)">'+f(r.gastos)+'</td><td style="padding:3px 6px;text-align:right">'+f(r.jornales)+'</td><td style="padding:3px 6px;text-align:right;font-weight:600">'+f(r.tot_caja_efectivo_final)+'</td></tr>').join('');
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 5px">Fecha</th><th style="text-align:left;padding:3px 5px">Turno</th><th style="text-align:left;padding:3px 5px">Colab</th><th style="text-align:right;padding:3px 5px">Caja ini</th><th style="text-align:right;padding:3px 5px">Efectivo</th><th style="text-align:right;padding:3px 5px">Tarjeta</th><th style="text-align:right;padding:3px 5px">Total</th><th style="text-align:right;padding:3px 5px">Gastos</th><th style="text-align:right;padding:3px 5px">Jorn</th><th style="text-align:right;padding:3px 5px">A caja gde</th><th style="text-align:right;padding:3px 5px">Caja final</th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 5px">'+r.fecha+'</td><td style="padding:3px 5px;color:var(--muted)">'+(r.turno||'-')+'</td><td style="padding:3px 5px">'+(r.colab||'-')+'</td><td style="padding:3px 5px;text-align:right">'+f(r.caja_inicial)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.efectivo)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.tarjeta)+'</td><td style="padding:3px 5px;text-align:right;color:var(--green);font-weight:600">'+f(r.total_ventas)+'</td><td style="padding:3px 5px;text-align:right;color:var(--red)">'+f(r.gastos)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.jornales)+'</td><td style="padding:3px 5px;text-align:right">'+f(r.a_caja_grande)+'</td><td style="padding:3px 5px;text-align:right;font-weight:700">'+f(r.tot_caja_efectivo_final)+'</td></tr>').join('');
       html+='</tbody></table></div>';
     } else { html+='<div style="color:var(--muted)">Sin cajas cargadas todavía.</div>'; }
     el.style.color='var(--text)'; el.innerHTML=html;
@@ -4327,14 +4328,14 @@ async function renderCajasRecientes(){
 async function guardarCaja(){
   const msg=document.getElementById('cj-msg'), btn=document.getElementById('cj-btn');
   const v=id=>document.getElementById(id).value, n=id=>parseFloat(document.getElementById(id).value)||0;
-  const row={ fecha:v('cj-fecha'), colab:(window._staffName||v('cj-colab').trim()),
+  const row={ fecha:v('cj-fecha'), turno:v('cj-turno'), colab:(window._staffName||v('cj-colab').trim()),
     caja_inicial:n('cj-ini'), efectivo:n('cj-efe'), tarjeta:n('cj-tar'), total_ventas:n('cj-totv'),
     gastos:n('cj-gastos'), jornales:n('cj-jorn'), a_caja_grande:n('cj-acg'),
     tot_caja_efectivo_final:n('cj-fin'), source:'app' };
   msg.style.color='var(--muted)'; msg.textContent='';
   if(!row.fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
   btn.disabled=true; const ot=btn.textContent; btn.textContent='Guardando…';
-  try{ const {error}=await _sb.from('daily_cashflow').upsert(row,{onConflict:'fecha'}); if(error) throw error;
+  try{ const {error}=await _sb.from('daily_cashflow').upsert(row,{onConflict:'fecha,turno'}); if(error) throw error;
     msg.style.color='var(--green)'; msg.textContent='✓ Cierre de caja guardado ('+row.fecha+')'; renderCajasRecientes();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
