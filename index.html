@@ -786,7 +786,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <div class="cs">Sincronizado desde Sheets · todo línea por línea</div>
     </div>
     <div class="card" style="cursor:pointer;transition:all .2s;border-color:rgba(239,71,111,.4)" onmouseover="this.style.background='var(--card2)'" onmouseout="this.style.background=''" onclick="showEvSub('gastosItems',this)">
-      <div class="ct">💸 Gastos Diarios — Lista completa <span style="float:right;font-size:10px;color:var(--muted)" id="ev-gastosItems-arrow">▼</span></div>
+      <div class="ct">💸 Gastos diarios desde el local — Lista completa <span style="float:right;font-size:10px;color:var(--muted)" id="ev-gastosItems-arrow">▼</span></div>
       <div class="cv" style="color:var(--red);font-size:18px" id="kpi-gastos-items">— filas</div>
       <div class="cs">Sincronizado desde Sheets · todo línea por línea</div>
     </div>
@@ -797,18 +797,12 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div id="ev-sub-content"></div>
   </div>
 
-  <div class="g g4 mt">
+  <div class="g g3 mt">
     <div class="card">
       <div class="ct">Gastos Variables</div>
       <div class="cv-sm" id="kpi-gv">$77.623</div>
       <div class="cs">31% de ventas</div>
       <div class="badge br">↑ histórico era 14%</div>
-    </div>
-    <div class="card">
-      <div class="ct">Gastos Fijos Reales</div>
-      <div class="cv-sm" id="kpi-gf">$138.601</div>
-      <div class="cs">pagados en marzo</div>
-      <div class="badge by">⚠ Deuda $7.345</div>
     </div>
     <div class="card">
       <div class="ct">BPS Real vs Estimado</div>
@@ -884,9 +878,9 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div class="card mt" style="border-color:rgba(239,71,111,.35)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div class="stl" style="margin:0">🏠 Gastos Fijos del Ecosistema</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:12px;color:var(--muted)">Total mensual: <span id="evg-gf-total" style="color:var(--red);font-weight:700">—</span></div>
-        <div style="font-size:12px;color:var(--muted)">≈ <span id="evg-gf-usd" style="color:var(--yellow);font-weight:700">—</span></div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:var(--muted)">Total mensual: <span id="evg-gf-total" style="color:var(--red);font-weight:700">—</span> <span style="color:var(--muted)">≈ <span id="evg-gf-usd" style="color:var(--yellow);font-weight:700">—</span></span></div>
+        <div style="font-size:13px;color:var(--muted);margin-top:3px">Resta por abonar: <span id="evg-gf-resta" style="color:var(--yellow);font-weight:700">—</span></div>
       </div>
     </div>
     <table>
@@ -3800,6 +3794,8 @@ async function loadGfPagos(){
   }catch(e){}
   if(typeof renderEvgGF==='function') renderEvgGF();
   renderGfPagosMes();
+  if(typeof renderEvergreenKPI==='function') renderEvergreenKPI();
+  if(typeof updateEgresosKPI==='function') updateEgresosKPI();
 }
 async function toggleGfPago(concepto, prov, monto, moneda){
   const ex=_gfPagos[concepto];
@@ -3860,6 +3856,10 @@ function renderEvgGF() {
   const el2 = document.getElementById('evg-gf-usd');
   if (el1) el1.textContent = '$' + Math.round(totalUY).toLocaleString('es-UY') + ' UY';
   if (el2) el2.textContent = 'USD ' + totalUSD.toFixed(0);
+  const _sumPag = Object.values(_gfPagos||{}).reduce((a,r)=>a+(+r.monto_uy||0),0);
+  const _resta = totalUY - _sumPag;
+  const el3 = document.getElementById('evg-gf-resta');
+  if (el3) el3.textContent = '$' + Math.round(_resta).toLocaleString('es-UY') + ' UY';
 }
 
 function addEvgGF() {
@@ -4279,7 +4279,9 @@ async function renderEvergreenKPI(){
   }catch(e){ return; }
   try{ const {data}=await _sb.from('prex_payments').select('monto').gte('fecha',m1).lte('fecha',hoy); prex=(data||[]).reduce((a,r)=>a+(+r.monto||0),0); }catch(e){}
   const fxu=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.fx&&window.LIVE.meta.fx.usd)||(typeof FX!=='undefined'?FX.usd:39);
-  const egBase=g+j;
+  let gfp=0;
+  try{ const {data}=await _sb.from('gastos_fijos_pagos').select('monto_uy').eq('periodo', hoy.slice(0,7)); gfp=(data||[]).reduce((a,r)=>a+(+r.monto_uy||0),0); }catch(e){}
+  const egBase=g+j+gfp;
   if(!window.LIVE) window.LIVE={meta:{},evergreen:{}};
   if(!window.LIVE.evergreen) window.LIVE.evergreen={};
   M.v=v; M.gv=g; M.s=j; M.gf=0; M.u=v-egBase; M.usd=Math.round((v-egBase)/fxu);
@@ -5356,42 +5358,22 @@ async function updateEgresosKPI(){
   const elBd  = document.getElementById('kpi-egresos-breakdown');
   if (!elVal) return;
   const fUY = v => '$' + Math.round(v||0).toLocaleString('es-UY');
-  // Calcular GV/GF de TRANSFERS
-  const toUY = t => t.moneda==='USD'?t.monto*FX.usd:t.monto;
-  const neg = TRANSFERS.filter(t=>t.tipo==='Negocio');
-  const totalGVtx = neg.filter(t=>t.sub==='GV').reduce((a,t)=>a+toUY(t),0);
-  const totalGFtx = neg.filter(t=>t.sub==='GF').reduce((a,t)=>a+toUY(t),0);
-  // Fetch daily_cashflow del mes actual (gastos col G + jornales col H)
-  let cfGastos = 0, cfJornales = 0;
-  if (_user) {
-    try {
-      const hoy = new Date();
-      const yyyy = hoy.getFullYear();
-      const mm = String(hoy.getMonth()+1).padStart(2,'0');
-      const monthStart = `${yyyy}-${mm}-01`;
-      const nextMonthDate = new Date(yyyy, hoy.getMonth() + 1, 1);
-      const nyyy = nextMonthDate.getFullYear();
-      const nmm  = String(nextMonthDate.getMonth() + 1).padStart(2,'0');
-      const nextMonthStart = `${nyyy}-${nmm}-01`;
-      const { data } = await _sb.from('daily_cashflow')
-        .select('gastos, jornales')
-        .gte('fecha', monthStart).lt('fecha', nextMonthStart);
-      if (data) {
-        cfGastos   = data.reduce((a,r)=>a+(parseFloat(r.gastos)||0),0);
-        cfJornales = data.reduce((a,r)=>a+(parseFloat(r.jornales)||0),0);
-      }
-    } catch(e){ console.warn('updateEgresosKPI fetch err', e); }
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  const m1=hoy.slice(0,8)+'01';
+  let g=0,j=0,v=0,prex=0;
+  if(typeof _sb!=='undefined' && _sb){
+    try{ const {data}=await _sb.from('daily_cashflow').select('total_ventas,gastos,jornales').gte('fecha',m1).lte('fecha',hoy);
+      (data||[]).forEach(r=>{ g+=parseFloat(r.gastos)||0; j+=parseFloat(r.jornales)||0; v+=parseFloat(r.total_ventas)||0; });
+    }catch(e){}
+    try{ const {data}=await _sb.from('prex_payments').select('monto').gte('fecha',m1).lte('fecha',hoy); prex=(data||[]).reduce((a,r)=>a+(parseFloat(r.monto)||0),0); }catch(e){}
   }
-  const totalGV = totalGVtx + cfGastos;
-  const totalGFsueldos = totalGFtx + cfJornales;
-  const totalEgresos = totalGV + totalGFsueldos;
-  // Ventas (últimos 30 días) desde HIST (último mes registrado)
-  const mLast = HIST[HIST.length-1] || {v:0};
-  const ventas = mLast.v || 0;
-  const pct = ventas > 0 ? Math.round(totalEgresos/ventas*100) : 0;
+  let gfp=0;
+  try{ const {data}=await _sb.from('gastos_fijos_pagos').select('monto_uy').eq('periodo',m1.slice(0,7)); gfp=(data||[]).reduce((a,r)=>a+(parseFloat(r.monto_uy)||0),0); }catch(e){}
+  const totalEgresos = g + j + prex + gfp;
+  const pct = v>0 ? Math.round(totalEgresos/v*100) : 0;
   elVal.textContent = fUY(totalEgresos);
   if (elPct) elPct.textContent = pct + '% de las ventas del mes';
-  if (elBd)  elBd.innerHTML = `GV ${fUY(totalGV)} · GF ${fUY(totalGFtx)} · Sueldos ${fUY(cfJornales)}`;
+  if (elBd)  elBd.innerHTML = 'Gastos local '+fUY(g)+' · Jornales '+fUY(j)+' · Prex '+fUY(prex)+' · G.Fijos '+fUY(gfp);
 }
 
 // ═══ VENTAS DIARIAS — lee daily_sales de Supabase y muestra tabla con filtros ═══
@@ -5580,7 +5562,7 @@ function renderGastosItemsPanel(content, fUY){
   content.innerHTML = `
     <div class="card" style="border-color:rgba(239,71,111,.4)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div class="stl" style="margin:0">💸 Gastos Diarios — Lista completa</div>
+        <div class="stl" style="margin:0">💸 Gastos diarios desde el local — Lista completa</div>
         <button onclick="showEvSub('gastosItems',null)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">×</button>
       </div>
       <div id="gi-status" style="font-size:12px;color:var(--muted);margin-bottom:10px">Cargando desde Supabase...</div>
@@ -5817,7 +5799,7 @@ function showEvSub(tipo, card) {
     content.innerHTML = `
       <div class="card" style="border-color:rgba(239,71,111,.4)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="stl" style="margin:0">💸 Detalle de Egresos — Abril 2026</div>
+          <div class="stl" style="margin:0">💸 Detalle de Egresos — ${(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.mesLabel)||'mes actual'}</div>
           <button onclick="showEvSub('egresos',null)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">×</button>
         </div>
         <div id="egresos-loading" style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ Cargando datos de la caja diaria...</div>
@@ -5828,7 +5810,13 @@ function showEvSub(tipo, card) {
     // Cargar datos asincrónico
     (async () => {
       const toUY = t => t.moneda==='USD'?t.monto*FX.usd:t.monto;
-      const neg = TRANSFERS.filter(t=>t.tipo==='Negocio');
+      let neg = [];
+      try{
+        const _hoyE=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+        const _m1E=_hoyE.slice(0,8)+'01';
+        const {data:_pp}=await _sb.from('prex_payments').select('fecha,proveedor,concepto,tipo,monto').gte('fecha',_m1E).lte('fecha',_hoyE);
+        neg=(_pp||[]).map(r=>({fecha:r.fecha, benef:(r.proveedor||r.concepto||'Prex'), cat:(r.proveedor||r.concepto||'Prex'), monto:+r.monto||0, moneda:'UY', tipo:'Negocio', sub:(r.tipo==='fijo'?'GF':'GV')}));
+      }catch(e){}
       const gvList = neg.filter(t=>t.sub==='GV').sort((a,b)=>toUY(b)-toUY(a));
       const gfList = neg.filter(t=>t.sub==='GF').sort((a,b)=>toUY(b)-toUY(a));
       const totalGVtx = gvList.reduce((a,t)=>a+toUY(t),0);
@@ -6001,46 +5989,6 @@ function showEvSub(tipo, card) {
                 }).join('') || '<div style="color:var(--muted);padding:8px;text-align:center;font-size:11px">Sin GF transferencias</div>'}
               </div>
               ${cfJornales > 0 ? `<div style="margin-top:8px;font-size:10px;color:var(--text2)"><strong>+ ${fUY(cfJornales)}</strong> en Sueldos pagados como Jornales (col H del Sheets — pagos diarios desde caja a colaboradores)</div>` : ''}
-            </div>
-          </div>
-        </div>
-
-        <!-- Sección 3: Estructura Presupuestada con comparación -->
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--purple);margin-bottom:8px">📋 Estructura Mensual Presupuestada — ${fUY(totalGFfijos)}</div>
-          <div class="g g21" style="gap:12px">
-            <div>
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Presupuesto vs ejecutado por categoría</div>
-              ${estructCats.map(([cat,val],i)=>{
-                const pct = totalGFfijos>0?(val/totalGFfijos*100).toFixed(1):0;
-                const pagado = gfRealByCat[cat] || 0;
-                const pctPagado = val>0 ? Math.min(100,(pagado/val*100)).toFixed(0) : 0;
-                const colorBar = pctPagado >= 90 ? 'var(--green)' : pctPagado >= 50 ? 'var(--yellow)' : 'var(--red)';
-                return `<div style="margin-bottom:8px">
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <div style="flex:1;font-size:12px">${cat}</div>
-                    <div style="font-size:10px;color:var(--text2);min-width:70px;text-align:right">${fUY(pagado)} de</div>
-                    <div style="font-size:11px;color:var(--purple);font-weight:700;min-width:75px;text-align:right">${fUY(val)}</div>
-                  </div>
-                  <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
-                    <div style="height:100%;width:${pctPagado}%;background:${colorBar}"></div>
-                  </div>
-                  <div style="font-size:10px;color:${colorBar};text-align:right">${pctPagado}% pagado este mes</div>
-                </div>`;
-              }).join('')}
-            </div>
-            <div>
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Lista completa de fijos mensuales</div>
-              <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px">
-                ${EVG_GF.map(r=>{
-                  const orig=r.moneda==='USD'?'USD '+r.monto:r.moneda==='ARS'?'$'+r.monto+' ARS':'$'+Math.round(r.monto).toLocaleString('es-UY');
-                  return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px">
-                    <div><span style="font-weight:600">${r.concepto}</span> <span style="color:var(--muted);font-size:10px">· ${r.prov}</span></div>
-                    <div style="color:var(--purple);font-weight:600">${orig}</div>
-                  </div>`;
-                }).join('')}
-              </div>
-              <div class="ch-wrap" style="height:140px;margin-top:10px"><canvas id="c-ev-egresos-pie"></canvas></div>
             </div>
           </div>
         </div>`;
