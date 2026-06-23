@@ -606,13 +606,38 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div class="pg-sub">Cargá las ventas y los gastos del local — se guardan al instante en la nube</div>
 
   <div style="display:flex;gap:8px;margin:14px 0">
-    <button id="carga-tab-venta" class="cur-btn on" onclick="cargaTab('venta')" style="padding:8px 18px;border-radius:8px;cursor:pointer">🟢 Venta</button>
-    <button id="carga-tab-gasto" class="cur-btn" onclick="cargaTab('gasto')" style="padding:8px 18px;border-radius:8px;cursor:pointer">🔴 Gasto</button>
-    <button id="carga-tab-prex" class="cur-btn" onclick="cargaTab('prex')" style="padding:8px 18px;border-radius:8px;cursor:pointer">💳 Pago Prex</button>
+    <button id="carga-tab-caja" class="cur-btn on" onclick="cargaTab('caja')" style="padding:8px 16px;border-radius:8px;cursor:pointer">📅 Cajas Diarias</button>
+    <button id="carga-tab-venta" class="cur-btn" onclick="cargaTab('venta')" style="padding:8px 16px;border-radius:8px;cursor:pointer">🛒 Ventas Diarias</button>
+    <button id="carga-tab-gasto" class="cur-btn" onclick="cargaTab('gasto')" style="padding:8px 16px;border-radius:8px;cursor:pointer">💸 Gastos Diarios</button>
+    <button id="carga-tab-prex" class="cur-btn" onclick="cargaTab('prex')" style="padding:8px 16px;border-radius:8px;cursor:pointer">💳 Pago Prex</button>
   </div>
 
   <!-- FORM VENTA -->
-  <div id="carga-form-venta" class="card" style="border-color:rgba(82,183,136,.4);max-width:760px">
+  <!-- FORM CAJAS DIARIAS (igual hoja del Excel) -->
+  <div id="carga-form-caja" class="card" style="border-color:rgba(76,201,240,.45);max-width:780px">
+    <div class="stl" style="margin-bottom:6px">Cierre de caja del día</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Igual que la hoja CAJAS DIARIAS del Excel — un cierre por día. El total y el efectivo final se calculan solos.</div>
+    <div class="g g3" style="gap:10px">
+      <div><label class="cg-l">Fecha</label><input type="date" id="cj-fecha" class="cg-i"></div>
+      <div><label class="cg-l">Colab</label><input type="text" id="cj-colab" class="cg-i" placeholder="Nombre"></div>
+      <div><label class="cg-l">Caja inicial</label><input type="number" id="cj-ini" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
+    </div>
+    <div class="g g3" style="gap:10px;margin-top:10px">
+      <div><label class="cg-l">Efectivo</label><input type="number" id="cj-efe" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
+      <div><label class="cg-l">Tarjeta</label><input type="number" id="cj-tar" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
+      <div><label class="cg-l">Total ventas</label><input type="number" id="cj-totv" class="cg-i" min="0" step="1" style="font-weight:700;color:var(--green)"></div>
+    </div>
+    <div class="g g4" style="gap:10px;margin-top:10px">
+      <div><label class="cg-l">Gastos</label><input type="number" id="cj-gastos" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
+      <div><label class="cg-l">Jornales</label><input type="number" id="cj-jorn" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
+      <div><label class="cg-l">A caja grande</label><input type="number" id="cj-acg" class="cg-i" min="0" step="1" oninput="cajaAuto()"></div>
+      <div><label class="cg-l">Tot caja efectivo</label><input type="number" id="cj-fin" class="cg-i" min="0" step="1" style="font-weight:700"></div>
+    </div>
+    <button onclick="guardarCaja()" id="cj-btn" style="margin-top:16px;width:100%;padding:12px;background:#4cc9f0;color:#04141a;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">＋ Guardar cierre de caja</button>
+    <div id="cj-msg" style="margin-top:10px;font-size:13px;min-height:18px"></div>
+  </div>
+
+  <div id="carga-form-venta" class="card" style="border-color:rgba(82,183,136,.4);max-width:760px;display:none">
     <div class="stl" style="margin-bottom:14px">Nueva venta</div>
     <div class="g g3" style="gap:10px">
       <div><label class="cg-l">Fecha</label><input type="date" id="cv-fecha" class="cg-i"></div>
@@ -4201,8 +4226,9 @@ function cargaInjectCSS(){
 async function cargaInit(){
   cargaInjectCSS();
   const t=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
-  ['cv-fecha','cg-fecha','cp-fecha'].forEach(id=>{ const e=document.getElementById(id); if(e&&!e.value) e.value=t; });
+  ['cv-fecha','cg-fecha','cp-fecha','cj-fecha'].forEach(id=>{ const e=document.getElementById(id); if(e&&!e.value) e.value=t; });
   const _cc=document.getElementById('cv-colab'); if(_cc&&window._staffName){ _cc.value=window._staffName; _cc.readOnly=true; }
+  const _cj=document.getElementById('cj-colab'); if(_cj&&window._staffName){ _cj.value=window._staffName; _cj.readOnly=true; }
   try{
     try{ if(typeof fetchProductos==='function'){ await fetchProductos(); } }catch(e){}
     const dl=document.getElementById('cv-prod-list');
@@ -4210,9 +4236,10 @@ async function cargaInit(){
   }catch(e){}
   renderCargaHoy();
   renderPrexMes();
+  cargaTab('caja');
 }
 function cargaTab(t){
-  ['venta','gasto','prex'].forEach(x=>{
+  ['caja','venta','gasto','prex'].forEach(x=>{
     const fo=document.getElementById('carga-form-'+x); if(fo) fo.style.display=(x===t)?'block':'none';
     const bt=document.getElementById('carga-tab-'+x); if(bt) bt.classList.toggle('on',x===t);
   });
@@ -4232,6 +4259,29 @@ function cargaAutofill(){
   if(p){ if(p.rubro) document.getElementById('cv-rubro').value=p.rubro;
     if(p.precio_venta){ document.getElementById('cv-precio').value=Math.round(p.precio_venta); cargaTotalV(); } }
 }
+function cajaAuto(){
+  const v=id=>parseFloat(document.getElementById(id).value)||0;
+  const totv=v('cj-efe')+v('cj-tar');
+  document.getElementById('cj-totv').value=totv?Math.round(totv):'';
+  const fin=v('cj-ini')+v('cj-efe')-v('cj-gastos')-v('cj-jorn')-v('cj-acg');
+  document.getElementById('cj-fin').value=Math.round(fin);
+}
+async function guardarCaja(){
+  const msg=document.getElementById('cj-msg'), btn=document.getElementById('cj-btn');
+  const v=id=>document.getElementById(id).value, n=id=>parseFloat(document.getElementById(id).value)||0;
+  const row={ fecha:v('cj-fecha'), colab:(window._staffName||v('cj-colab').trim()),
+    caja_inicial:n('cj-ini'), efectivo:n('cj-efe'), tarjeta:n('cj-tar'), total_ventas:n('cj-totv'),
+    gastos:n('cj-gastos'), jornales:n('cj-jorn'), a_caja_grande:n('cj-acg'),
+    tot_caja_efectivo_final:n('cj-fin'), source:'app' };
+  msg.style.color='var(--muted)'; msg.textContent='';
+  if(!row.fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
+  btn.disabled=true; const ot=btn.textContent; btn.textContent='Guardando…';
+  try{ const {error}=await _sb.from('daily_cashflow').upsert(row,{onConflict:'fecha'}); if(error) throw error;
+    msg.style.color='var(--green)'; msg.textContent='✓ Cierre de caja guardado ('+row.fecha+')';
+  }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
+  btn.disabled=false; btn.textContent=ot;
+}
+
 async function guardarVenta(){
   const msg=document.getElementById('cv-msg'), btn=document.getElementById('cv-btn'), g=id=>document.getElementById(id).value;
   const row={ fecha:g('cv-fecha'), turno:g('cv-turno'), colab:(window._staffName||g('cv-colab').trim()), producto:g('cv-producto').trim(),
@@ -4341,12 +4391,15 @@ function isStaffUser(){
   return r==='staff';
 }
 function applyAccessControl(){
+  const pb=document.getElementById('carga-tab-prex');
   if(isStaffUser()){
     document.querySelectorAll('#sb .ni').forEach(n=>{ n.style.display=(n.id==='ni-carga')?'':'none'; });
     document.querySelectorAll('#sb .nl').forEach(l=>{ l.style.display=(l.textContent==='Operación')?'':'none'; });
+    if(pb) pb.style.display='none';
     go('carga', document.getElementById('ni-carga'));
   } else {
     document.querySelectorAll('#sb .ni,#sb .nl').forEach(n=>{ n.style.display=''; });
+    if(pb) pb.style.display='';
   }
 }
 var _origGo2 = go;
