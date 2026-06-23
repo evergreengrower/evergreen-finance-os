@@ -1193,8 +1193,8 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   <div class="g g21">
     <div class="card">
       <div class="stl">⚙️ Tipos de cambio actuales</div>
-      <div class="fx-row"><div class="fx-lbl">🇺🇾 UY$ → USD</div><span style="color:var(--muted);font-size:12px">÷</span><input class="fx-inp" id="fx-usd" value="39" oninput="updateFX()"> <span style="font-size:12px;color:var(--muted)">UY$/USD</span></div>
-      <div class="fx-row"><div class="fx-lbl">🇦🇷 USD → ARS</div><span style="color:var(--muted);font-size:12px">×</span><input class="fx-inp" id="fx-ars" value="1420" oninput="updateFX()"> <span style="font-size:12px;color:var(--muted)">ARS/USD</span></div>
+      <div class="fx-row"><div class="fx-lbl">🇺🇾 UY$ → USD</div><span style="color:var(--muted);font-size:12px">÷</span><input class="fx-inp" id="fx-usd" value="40" oninput="updateFX()"> <span style="font-size:12px;color:var(--muted)">UY$/USD</span></div>
+      <div class="fx-row"><div class="fx-lbl">🇦🇷 USD → ARS</div><span style="color:var(--muted);font-size:12px">×</span><input class="fx-inp" id="fx-ars" value="1450" oninput="updateFX()"> <span style="font-size:12px;color:var(--muted)">ARS/USD</span></div>
       <div class="fx-row"><div class="fx-lbl">🇺🇾 UY$ → ARS (calculado)</div><input class="fx-inp" id="fx-calc" readonly style="opacity:.6"> <span style="font-size:12px;color:var(--muted)">ARS/UY$</span></div>
       <div class="divider"></div>
       <div class="al al-b" style="margin-bottom:0"><div class="al-ic">💡</div><div>
@@ -1966,16 +1966,6 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
   </div>
   <div class="pg-sub">Flujo de caja por moneda · Abril 2026</div>
 
-  <div class="card mt" style="border-color:rgba(76,201,240,.4)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="stl" style="margin:0">💳 Mercado Pago AR — Movimientos personales</div>
-      <button onclick="renderMovPersonales()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">↻ Actualizar</button>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Gastos personales de Buenos Aires (fijos + variables). El bot los carga al reenviarle el extracto. No afecta la utilidad del negocio.</div>
-    <div id="mp-personales" style="font-size:12px;color:var(--muted)">—</div>
-  </div>
-
-
   <div class="ctabs">
     <div class="ctab on" onclick="setCF('cajas',this)">🏦 Gestión de Cajas</div>
     <div class="ctab" onclick="setCF('ars',this)">🇦🇷 ARS</div>
@@ -2077,7 +2067,28 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
           <button onclick="openCajaForm('mp','ingreso')" style="flex:1;background:rgba(0,180,120,.15);color:#00b478;border:1px solid rgba(0,180,120,.35);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">+ Ingresar</button>
           <button onclick="openCajaForm('mp','egreso')"  style="flex:1;background:rgba(239,71,111,.12);color:var(--red);border:1px solid rgba(239,71,111,.3);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">− Pagar</button>
         </div>
+        <button onclick="openMpModal()" style="width:100%;margin-top:6px;background:rgba(0,180,120,.08);color:#00b478;border:1px solid rgba(0,180,120,.3);border-radius:7px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">📒 Ver movimientos</button>
       </div>
+    </div>
+
+    <!-- MODAL MERCADOPAGO AR — MOVIMIENTOS -->
+    <div id="mp-modal" class="card mt" style="display:none;border-color:rgba(0,180,120,.5);background:rgba(0,180,120,.05)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="stl" style="color:#00b478;margin:0">💚 MercadoPago AR — Movimientos personales</div>
+        <button onclick="closeMpModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Gastos personales de Buenos Aires (fijos + variables). El bot los carga al reenviarle el extracto. No afecta la utilidad del negocio.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px">
+        <div><div class="ct">Desde</div><input id="mp-f-desde" type="date" onchange="renderMovPersonales()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:13px"></div>
+        <div><div class="ct">Hasta</div><input id="mp-f-hasta" type="date" onchange="renderMovPersonales()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:13px"></div>
+        <div><div class="ct">Tipo</div><select id="mp-f-tipo" onchange="renderMovPersonales()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:13px"><option value="">Todos</option><option value="ing">Solo ingresos</option><option value="egr">Solo egresos</option></select></div>
+        <div><div class="ct">Categoría</div><select id="mp-f-cat" onchange="renderMovPersonales()" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:13px"><option value="">Todas</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button onclick="mpClearFilters()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">Limpiar filtros</button>
+        <button onclick="openMpModal()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">↻ Actualizar datos</button>
+      </div>
+      <div id="mp-personales" style="font-size:12px;color:var(--muted)">—</div>
     </div>
 
     <!-- MODAL CANAL GONZALO -->
@@ -2196,17 +2207,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <button onclick="ejecutarTransfer()" style="width:100%;margin-top:12px;background:rgba(99,179,237,.25);color:var(--blue);border:1px solid rgba(99,179,237,.5);border-radius:8px;padding:10px;font-size:14px;font-weight:700;cursor:pointer">Confirmar transferencia →</button>
     </div>
 
-    <!-- HISTORIAL -->
-    <div class="card mt">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="stl">📋 Historial de movimientos</div>
-        <button onclick="clearCajas()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer">Borrar todo</button>
-      </div>
-      <table>
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Caja</th><th class="tr">Monto</th><th></th></tr></thead>
-        <tbody id="cajas-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Sin movimientos aún — usá los botones de cada caja para empezar</td></tr></tbody>
-      </table>
-    </div>
+    <tbody id="cajas-tbody" style="display:none"></tbody>
   </div>
 
   <!-- CF ARS -->
@@ -2698,7 +2699,7 @@ const RUB=[
   {n:'INDUMENTARIA',v:21300,p:1.0,c:'#ef476f'},
   {n:'FERTILIZANTE',v:2580,p:0.1,c:'#fb8500'},
 ];
-const FX={usd:39,ars:1420};
+const FX={usd:40,ars:1450};
 let CUR='UY';
 const gc='rgba(37,61,45,.5)',tc='#526e5c';
 const M={v:250875,gv:77623,s:71880,gf:66721,u:34651,usd:888};
@@ -2772,7 +2773,7 @@ function go(id,el){
   if(id==='evergreen') renderEvergreenKPI();
   if(id==='evergreen') loadGfPagos();
   if(id==='proveedores') renderProveedores();
-  if(id==='cashflow') renderMovPersonales();
+  // mov personales se cargan al abrir el modal de MercadoPago AR
   if(id==='facturas') facturasInit();
   setTimeout(()=>renderCharts(id),60);
 }
@@ -4324,7 +4325,7 @@ async function renderEvergreenKPI(){
     dias=new Set(rows.map(r=>r.fecha)).size;
   }catch(e){ return; }
   try{ const {data}=await _sb.from('prex_payments').select('monto').gte('fecha',m1).lte('fecha',hoy); prex=(data||[]).reduce((a,r)=>a+(+r.monto||0),0); }catch(e){}
-  const fxu=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.fx&&window.LIVE.meta.fx.usd)||(typeof FX!=='undefined'?FX.usd:39);
+  const fxu=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.fx&&window.LIVE.meta.fx.usd)||(typeof FX!=='undefined'?FX.usd:40);
   let gfp=0;
   try{ const {data}=await _sb.from('gastos_fijos_pagos').select('monto_uy').eq('periodo', hoy.slice(0,7)); gfp=(data||[]).reduce((a,r)=>a+(+r.monto_uy||0),0); }catch(e){}
   const egBase=g+j+gfp;
@@ -4816,30 +4817,70 @@ async function borrarProveedor(id){
   try{ await _sb.from('proveedores').delete().eq('id',id); renderProveedores(); }catch(e){ alert('Error: '+(e.message||e)); }
 }
 
-async function renderMovPersonales(){
-  const el=document.getElementById('mp-personales'); if(!el) return;
-  el.innerHTML='<div style="color:var(--muted)">Cargando…</div>';
+var _mpRows=null;
+async function openMpModal(){
+  const m=document.getElementById('mp-modal'); if(m) m.style.display='';
+  const el=document.getElementById('mp-personales'); if(el) el.innerHTML='<div style="color:var(--muted)">Cargando…</div>';
   try{
-    const {data}=await _sb.from('mov_personales').select('fecha,descripcion,monto,categoria').eq('caja','MP AR').order('fecha',{ascending:false}).limit(500);
-    const rows=data||[];
-    const f=v=>'$'+Math.round(+v||0).toLocaleString('es-AR');
-    const ing=rows.filter(r=>(+r.monto)>0).reduce((a,r)=>a+(+r.monto||0),0);
-    const egr=rows.filter(r=>(+r.monto)<0).reduce((a,r)=>a+(+r.monto||0),0);
-    const byc={}; rows.forEach(r=>{ if((+r.monto)<0){ byc[r.categoria||'Otro']=(byc[r.categoria||'Otro']||0)+Math.abs(+r.monto); } });
-    const cats=Object.entries(byc).sort((a,b)=>b[1]-a[1]);
-    let html='<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">'
-      +'<span style="color:var(--green);font-weight:700">Ingresos: '+f(ing)+'</span>'
-      +'<span style="color:var(--red);font-weight:700">Egresos: '+f(Math.abs(egr))+'</span>'
-      +'<span style="font-weight:700">Neto: '+f(ing+egr)+'</span>'
-      +'<span style="color:var(--muted)">('+rows.length+' mov.)</span></div>';
-    if(cats.length) html+='<div style="font-size:11px;color:var(--muted);margin-bottom:10px">'+cats.map(c=>c[0]+': '+f(c[1])).join(' · ')+'</div>';
-    if(rows.length){
-      html+='<div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:4px 8px">Fecha</th><th style="text-align:left;padding:4px 8px">Descripción</th><th style="text-align:left;padding:4px 8px">Categoría</th><th style="text-align:right;padding:4px 8px">Monto</th></tr></thead><tbody>';
-      html+=rows.map(r=>'<tr><td style="padding:4px 8px">'+r.fecha+'</td><td style="padding:4px 8px">'+(r.descripcion||'')+'</td><td style="padding:4px 8px;color:var(--muted)">'+(r.categoria||'')+'</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:'+((+r.monto)<0?'var(--red)':'var(--green)')+'">'+f(r.monto)+'</td></tr>').join('');
-      html+='</tbody></table></div>';
-    } else { html+='<div style="color:var(--muted)">Sin movimientos cargados todavía.</div>'; }
-    el.innerHTML=html;
-  }catch(e){ el.innerHTML='<div style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</div>'; }
+    const {data}=await _sb.from('mov_personales').select('fecha,descripcion,monto,categoria').eq('caja','MP AR').order('fecha',{ascending:false}).limit(1000);
+    _mpRows=data||[];
+    const sel=document.getElementById('mp-f-cat');
+    if(sel){
+      const cur=sel.value;
+      const cats=[...new Set(_mpRows.map(r=>r.categoria||'Otro'))].sort();
+      sel.innerHTML='<option value="">Todas</option>'+cats.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+      sel.value=cur;
+    }
+  }catch(e){ const el=document.getElementById('mp-personales'); if(el) el.innerHTML='<div style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</div>'; return; }
+  renderMovPersonales();
+  if(m) m.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeMpModal(){ const m=document.getElementById('mp-modal'); if(m) m.style.display='none'; }
+function mpClearFilters(){
+  ['mp-f-desde','mp-f-hasta','mp-f-tipo','mp-f-cat'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  renderMovPersonales();
+}
+function mpSumSel(){
+  const f=v=>'$'+Math.round(+v||0).toLocaleString('es-AR');
+  const chk=[...document.querySelectorAll('.mp-chk:checked')];
+  const tot=chk.reduce((a,c)=>a+(+c.dataset.monto||0),0);
+  const out=document.getElementById('mp-selsum');
+  if(out) out.textContent=chk.length? (chk.length+' sel. · neto '+f(tot)) : 'Tocá filas para sumarlas';
+}
+function renderMovPersonales(){
+  const el=document.getElementById('mp-personales'); if(!el) return;
+  if(_mpRows===null){ openMpModal(); return; }
+  const f=v=>'$'+Math.round(+v||0).toLocaleString('es-AR');
+  const desde=(document.getElementById('mp-f-desde')||{}).value||'';
+  const hasta=(document.getElementById('mp-f-hasta')||{}).value||'';
+  const tipo=(document.getElementById('mp-f-tipo')||{}).value||'';
+  const cat=(document.getElementById('mp-f-cat')||{}).value||'';
+  let rows=_mpRows.filter(r=>{
+    if(desde && (r.fecha||'')<desde) return false;
+    if(hasta && (r.fecha||'')>hasta) return false;
+    if(tipo==='ing' && (+r.monto)<=0) return false;
+    if(tipo==='egr' && (+r.monto)>=0) return false;
+    if(cat && (r.categoria||'Otro')!==cat) return false;
+    return true;
+  });
+  const ing=rows.filter(r=>(+r.monto)>0).reduce((a,r)=>a+(+r.monto||0),0);
+  const egr=rows.filter(r=>(+r.monto)<0).reduce((a,r)=>a+(+r.monto||0),0);
+  const byc={}; rows.forEach(r=>{ if((+r.monto)<0){ byc[r.categoria||'Otro']=(byc[r.categoria||'Otro']||0)+Math.abs(+r.monto); } });
+  const cats=Object.entries(byc).sort((a,b)=>b[1]-a[1]);
+  const cardS='background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:110px';
+  let html='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div style="'+cardS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Ingresos</div><div style="font-weight:800;color:var(--green)">'+f(ing)+'</div></div>'
+    +'<div style="'+cardS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Egresos</div><div style="font-weight:800;color:var(--red)">'+f(Math.abs(egr))+'</div></div>'
+    +'<div style="'+cardS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Neto</div><div style="font-weight:800;color:var(--bright)">'+f(ing+egr)+'</div></div>'
+    +'<div style="'+cardS+'"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Movimientos</div><div style="font-weight:800">'+rows.length+'</div></div></div>';
+  if(cats.length) html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Por categoría: '+cats.map(c=>c[0]+': '+f(c[1])).join(' · ')+'</div>';
+  html+='<div style="font-size:11px;color:#00b478;font-weight:700;margin-bottom:8px" id="mp-selsum">Tocá filas para sumarlas</div>';
+  if(rows.length){
+    html+='<div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="padding:4px 6px"></th><th style="text-align:left;padding:4px 8px">Fecha</th><th style="text-align:left;padding:4px 8px">Descripción</th><th style="text-align:left;padding:4px 8px">Categoría</th><th style="text-align:right;padding:4px 8px">Monto</th></tr></thead><tbody>';
+    html+=rows.map(r=>'<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px;text-align:center"><input type="checkbox" class="mp-chk" data-monto="'+(+r.monto||0)+'" onchange="mpSumSel()"></td><td style="padding:4px 8px">'+r.fecha+'</td><td style="padding:4px 8px">'+(r.descripcion||'')+'</td><td style="padding:4px 8px;color:var(--muted)">'+(r.categoria||'')+'</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:'+((+r.monto)<0?'var(--red)':'var(--green)')+'">'+f(r.monto)+'</td></tr>').join('');
+    html+='</tbody></table></div>';
+  } else { html+='<div style="color:var(--muted)">Sin movimientos para este filtro.</div>'; }
+  el.innerHTML=html;
 }
 function applyAccessControl(){
   const pb=document.getElementById('carga-tab-prex');
