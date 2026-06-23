@@ -4590,7 +4590,7 @@ async function renderFacturas(){
     let hp='<div style="color:var(--yellow);font-weight:700;margin-bottom:8px">Total pendiente: '+f(totP)+' ('+pend.length+')</div>';
     if(pend.length){
       hp+='<div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Detalle</th><th style="text-align:left;padding:3px 6px">Vence</th><th style="text-align:right;padding:3px 6px">Monto</th><th style="padding:3px 6px"></th></tr></thead><tbody>';
-      hp+=pend.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px;color:var(--muted)">'+((r.detalle||'').slice(0,45))+'</td><td style="padding:3px 6px;color:'+((r.vencimiento&&r.vencimiento<hoy)?'var(--red)':'var(--muted)')+'">'+(r.vencimiento||'-')+'</td><td style="padding:3px 6px;text-align:right;font-weight:600">'+f(r.monto)+'</td><td style="padding:3px 6px;white-space:nowrap"><button onclick="marcarPagada('+r.id+')" style="background:var(--green);color:#08130d;border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer">Pagada</button> <span onclick="borrarFactura('+r.id+')" style="cursor:pointer;color:var(--muted);margin-left:4px" title="Borrar">✕</span></td></tr>').join('');
+      hp+=pend.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px;color:var(--muted)">'+((r.detalle||'').slice(0,45))+'</td><td style="padding:3px 6px;color:'+((r.vencimiento&&r.vencimiento<hoy)?'var(--red)':'var(--muted)')+'">'+(r.vencimiento||'-')+'</td><td style="padding:3px 6px;text-align:right;font-weight:600">'+f(r.monto)+'</td><td style="padding:3px 6px;white-space:nowrap"><button onclick="marcarPagada('+r.id+',\'prex\')" style="background:var(--yellow);color:#1a1505;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer">💳 Prex</button> <button onclick="marcarPagada('+r.id+',\'cash\')" style="background:var(--green);color:#08130d;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer">💵 Cash</button> <span onclick="borrarFactura('+r.id+')" style="cursor:pointer;color:var(--muted);margin-left:4px" title="Borrar">✕</span></td></tr>').join('');
       hp+='</tbody></table></div>';
     } else { hp+='<div style="color:var(--muted)">Sin facturas pendientes 🎉</div>'; }
     elP.style.color='var(--text)'; elP.innerHTML=hp;
@@ -4603,15 +4603,20 @@ async function renderFacturas(){
     if(elG) elG.innerHTML=hg;
   }catch(e){ elP.style.color='var(--red)'; elP.textContent='No se pudo leer: '+(e.message||e); }
 }
-async function marcarPagada(id){
-  if(!confirm('¿Marcar como pagada? Se registra como Pago Prex.')) return;
+async function marcarPagada(id, metodo){
+  metodo = metodo || 'prex';
+  const etq = metodo==='cash' ? 'Cash (desde el local)' : 'Prex';
+  if(!confirm('¿Marcar como pagada por '+etq+'?')) return;
   try{
     const {data:fr}=await _sb.from('facturas').select('*').eq('id',id).single();
     if(!fr) throw new Error('factura no encontrada');
     const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
-    const {data:pp,error:e1}=await _sb.from('prex_payments').insert({fecha:hoy, proveedor:fr.proveedor, concepto:(fr.detalle||('Factura '+(fr.proveedor||''))), tipo:'variable', monto:fr.monto, source:'app'}).select('id').single();
-    if(e1) throw e1;
-    const {error:e2}=await _sb.from('facturas').update({estado:'pagada', fecha_pago:hoy, prex_payment_id:(pp?pp.id:null)}).eq('id',id);
+    let ppid=null;
+    if(metodo==='prex'){
+      const {data:pp,error:e1}=await _sb.from('prex_payments').insert({fecha:hoy, proveedor:fr.proveedor, concepto:(fr.detalle||('Factura '+(fr.proveedor||''))), tipo:'variable', monto:fr.monto, source:'app'}).select('id').single();
+      if(e1) throw e1; ppid = pp?pp.id:null;
+    }
+    const {error:e2}=await _sb.from('facturas').update({estado:'pagada', fecha_pago:hoy, metodo_pago:metodo, prex_payment_id:ppid}).eq('id',id);
     if(e2) throw e2;
     renderFacturas();
     if(typeof loadPrexMes==='function'){ try{ await loadPrexMes(); }catch(e){} }
