@@ -2504,6 +2504,15 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
 
   <div class="card mt">
     <div class="stl">Detalle de liquidaciones — Abril 2026</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">
+      <div><label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Desde</label><input type="date" id="pos-desde" onchange="renderPosnet()" style="padding:7px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px"></div>
+      <div><label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Hasta</label><input type="date" id="pos-hasta" onchange="renderPosnet()" style="padding:7px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px"></div>
+      <button onclick="posnetPeriodo('7')" style="padding:7px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);border-radius:7px;font-size:12px;cursor:pointer">7 días</button>
+      <button onclick="posnetPeriodo('30')" style="padding:7px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);border-radius:7px;font-size:12px;cursor:pointer">30 días</button>
+      <button onclick="posnetPeriodo('mes')" style="padding:7px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);border-radius:7px;font-size:12px;cursor:pointer">Este mes</button>
+      <button onclick="posnetPeriodo('todo')" style="padding:7px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);border-radius:7px;font-size:12px;cursor:pointer">Todo</button>
+    </div>
+    <div id="pos-rango-info" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
     <table style="margin-top:10px">
       <thead><tr><th>Fecha</th><th class="tr">Monto UY$</th><th class="tr">USD equiv.</th></tr></thead>
       <tbody id="posnet-tbody"></tbody>
@@ -2713,7 +2722,7 @@ function setPais(p,el){
 function updateFX(){
   FX.usd=parseFloat(document.getElementById('fx-usd').value)||39;
   FX.ars=parseFloat(document.getElementById('fx-ars').value)||1100;
-  updateAR(); renderDeudas(); renderPosnet(); renderFondo(); renderCajas(); previewTransfer(); renderTxSummary(); renderGFChacra(); renderGFBaires();
+  updateAR(); renderDeudas(); renderPosnet(); updatePosnetDashboard(); renderFondo(); renderCajas(); previewTransfer(); renderTxSummary(); renderGFChacra(); renderGFBaires();
   const calc=(FX.ars/FX.usd).toFixed(2);
   document.getElementById('fx-calc').value=calc;
   updateFXTable();
@@ -3892,10 +3901,13 @@ async function renderPosnet() {
   const tbody = document.getElementById('posnet-tbody');
   if (!tbody) return;
   const hoy = (window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
-  const desde = (typeof _hace30==='function')? _hace30(hoy) : hoy;
+  let desde = (document.getElementById('pos-desde')||{}).value;
+  let hasta = (document.getElementById('pos-hasta')||{}).value;
+  if(!desde) desde = (typeof _hace30==='function')? _hace30(hoy) : hoy;
+  if(!hasta) hasta = hoy;
   let rows=[];
   try{
-    const {data}=await _sb.from('daily_cashflow').select('fecha,turno,tarjeta').gte('fecha',desde).lte('fecha',hoy).order('fecha',{ascending:false}).order('turno',{ascending:true});
+    const {data}=await _sb.from('daily_cashflow').select('fecha,turno,colab,tarjeta').gte('fecha',desde).lte('fecha',hasta).order('fecha',{ascending:false}).order('turno',{ascending:true}).limit(3000);
     rows=(data||[]).filter(r=>(+r.tarjeta||0)>0);
   }catch(e){ tbody.innerHTML='<tr><td colspan="3" style="color:var(--red)">No se pudo leer: '+(e.message||e)+'</td></tr>'; return; }
   const total = rows.reduce((a,r)=>a+(+r.tarjeta||0),0);
@@ -3903,7 +3915,7 @@ async function renderPosnet() {
   const neto = total - comision;
   const dias = new Set(rows.map(r=>r.fecha)).size || 1;
   const prom = total/dias;
-  tbody.innerHTML = rows.map(r=>'<tr><td>'+r.fecha.slice(5).replace('-','/')+' <span style="color:var(--muted);font-size:10px">'+(r.turno||'')+'</span></td><td class="tr mono" style="color:var(--bright)">$'+Math.round(+r.tarjeta||0).toLocaleString('es-UY')+'</td><td class="tr" style="color:var(--muted)">USD '+Math.round((+r.tarjeta||0)/FX.usd).toLocaleString()+'</td></tr>').join('') || '<tr><td colspan="3" style="color:var(--muted)">Sin ventas con tarjeta en el período</td></tr>';
+  tbody.innerHTML = rows.map(r=>'<tr><td>'+r.fecha.slice(5).replace('-','/')+' <span style="color:var(--muted);font-size:10px">'+(r.turno||'')+' '+(r.colab||'')+'</span></td><td class="tr mono" style="color:var(--bright)">$'+Math.round(+r.tarjeta||0).toLocaleString('es-UY')+'</td><td class="tr" style="color:var(--muted)">USD '+Math.round((+r.tarjeta||0)/FX.usd).toLocaleString()+'</td></tr>').join('') || '<tr><td colspan="3" style="color:var(--muted)">Sin ventas con tarjeta en el período</td></tr>';
   const fmt = v => '$'+Math.round(v).toLocaleString('es-UY');
   const fmtUSD = v => 'USD '+Math.round(v/FX.usd).toLocaleString();
   const set = (id,val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
@@ -3916,11 +3928,30 @@ async function renderPosnet() {
   set('pos-badge',    dias+' días con tarjeta');
   set('pos-tfoot-uy', fmt(total));
   set('pos-tfoot-usd',fmtUSD(total));
+  set('pos-rango-info','Período: '+desde+' → '+hasta+' · '+rows.length+' cierres · '+dias+' días · promedio/día '+fmt(prom));
+}
+async function updatePosnetDashboard(){
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  const desde=(typeof _hace30==='function')?_hace30(hoy):hoy;
+  let total=0;
+  try{ const {data}=await _sb.from('daily_cashflow').select('tarjeta').gte('fecha',desde).lte('fecha',hoy); total=(data||[]).reduce((a,r)=>a+(+r.tarjeta||0),0); }catch(e){}
+  const fmt=v=>'$'+Math.round(v).toLocaleString('es-UY'); const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   set('dash-posnet-total', fmt(total));
   set('dash-posnet-usdval','USD '+Math.round(total/FX.usd).toLocaleString());
   set('hub-posnet', fmt(total));
   set('hub-evg-posnet', fmt(total)+' UY');
   set('cf-uy-posnet', fmt(total));
+}
+function posnetPeriodo(tipo){
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  let desde=hoy;
+  if(tipo==='7'){ const d=new Date(hoy+'T00:00:00'); d.setDate(d.getDate()-7); desde=d.toISOString().slice(0,10); }
+  else if(tipo==='30'){ desde=(typeof _hace30==='function')?_hace30(hoy):hoy; }
+  else if(tipo==='mes'){ desde=hoy.slice(0,8)+'01'; }
+  else if(tipo==='todo'){ desde='2025-01-01'; }
+  const dd=document.getElementById('pos-desde'), dh=document.getElementById('pos-hasta');
+  if(dd) dd.value=desde; if(dh) dh.value=hoy;
+  renderPosnet();
 }
 
 // ═══ FONDO PERSONAL ═══
