@@ -829,7 +829,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div class="ch-wrap" style="height:180px"><canvas id="c-dash-struct"></canvas></div>
   </div>
 
-  <div class="g g2 mt">
+  <div class="mt">
     <div class="card" style="border-color:rgba(82,183,136,.4);cursor:pointer" onclick="go('posnet',null)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="ct" style="margin:0">💳 Ingresos Posnet Evergreen</div>
@@ -840,20 +840,6 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between">
         <div style="font-size:11px;color:var(--muted)">Comisión Handy: <span style="color:var(--yellow)">-$1.593 UY</span></div>
         <button onclick="event.stopPropagation();go('posnet',null)" style="background:var(--green);color:var(--bg);border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">Ver detalle →</button>
-      </div>
-    </div>
-    <div class="card" style="border-color:rgba(199,125,255,.4);cursor:pointer" onclick="go('fondos',null)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="ct" style="margin:0">💼 Fondo Personal — Estudio Jurídico</div>
-        <span class="badge bp">10% vendido</span>
-      </div>
-      <div class="cv" style="color:var(--purple)" id="dash-fondo-restante">USD 2.932</div>
-      <div class="cs">Restante de USD 7.000 · asignado: <span id="dash-fondo-asignado">USD 4.068</span></div>
-      <div style="margin-top:10px">
-        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:58%;background:var(--purple);border-radius:3px"></div>
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">58% asignado · 42% disponible</div>
       </div>
     </div>
   </div>
@@ -2472,7 +2458,10 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
      MÓDULO 13 — INGRESOS POSNET EVERGREEN
 ══════════════════════════════════════ -->
 <section id="posnet" class="sec">
-  <div class="pg-title">💳 Ingresos Posnet Evergreen</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div class="pg-title" style="margin:0">💳 Ingresos Posnet Evergreen</div>
+    <button onclick="goBack()" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap">← Atrás</button>
+  </div>
   <div class="pg-sub">Liquidaciones Handy (cobros con tarjeta) · Abril 2026</div>
 
   <div class="g g4">
@@ -2512,7 +2501,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <button onclick="posnetPeriodo('mes')" style="padding:7px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);border-radius:7px;font-size:12px;cursor:pointer">Este mes</button>
       <button onclick="posnetPeriodo('todo')" style="padding:7px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);border-radius:7px;font-size:12px;cursor:pointer">Todo</button>
     </div>
-    <div id="pos-rango-info" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+    <div id="pos-rango-info" style="font-size:14px;color:var(--green);font-weight:700;margin-bottom:8px"></div>
     <table style="margin-top:10px">
       <thead><tr><th>Fecha</th><th class="tr">Monto UY$</th><th class="tr">USD equiv.</th></tr></thead>
       <tbody id="posnet-tbody"></tbody>
@@ -2696,6 +2685,7 @@ function setGF(tab, el) {
   if(el) el.classList.add('on');
 }
 function go(id,el){
+  try{ const _c=document.querySelector('.sec.on'); if(_c && _c.id!==id) window._prevSec=_c.id; }catch(e){}
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   document.getElementById(id).classList.add('on');
@@ -2707,6 +2697,7 @@ function go(id,el){
   if(id==='evergreen' && typeof renderProductosInline === 'function') renderProductosInline(false);
   setTimeout(()=>renderCharts(id),60);
 }
+function goBack(){ go(window._prevSec||'dash', null); }
 
 // ═══ PAÍS TABS ═══
 function setPais(p,el){
@@ -3928,7 +3919,7 @@ async function renderPosnet() {
   set('pos-badge',    dias+' días con tarjeta');
   set('pos-tfoot-uy', fmt(total));
   set('pos-tfoot-usd',fmtUSD(total));
-  set('pos-rango-info','Período: '+desde+' → '+hasta+' · '+rows.length+' cierres · '+dias+' días · promedio/día '+fmt(prom));
+  set('pos-rango-info','💰 Total del período: '+fmt(total)+' ('+fmtUSD(total)+') · '+rows.length+' cierres · '+dias+' días · '+desde+' → '+hasta);
 }
 async function updatePosnetDashboard(){
   const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
