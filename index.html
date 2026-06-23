@@ -635,6 +635,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     </div>
     <button onclick="guardarCaja()" id="cj-btn" style="margin-top:16px;width:100%;padding:12px;background:#4cc9f0;color:#04141a;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">＋ Guardar cierre de caja</button>
     <div id="cj-msg" style="margin-top:10px;font-size:13px;min-height:18px"></div>
+    <div id="cj-recientes" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--muted)">—</div>
   </div>
 
   <div id="carga-form-venta" class="card" style="border-color:rgba(82,183,136,.4);max-width:760px;display:none">
@@ -656,6 +657,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     </div>
     <button onclick="guardarVenta()" id="cv-btn" style="margin-top:16px;width:100%;padding:12px;background:var(--green);color:#08130d;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">＋ Guardar venta</button>
     <div id="cv-msg" style="margin-top:10px;font-size:13px;min-height:18px"></div>
+    <div id="cv-recientes" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--muted)">—</div>
   </div>
 
   <!-- FORM GASTO -->
@@ -673,6 +675,7 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div style="max-width:180px;margin-top:10px"><label class="cg-l">Total $</label><input type="number" id="cg-total" class="cg-i" min="0" step="1" style="font-weight:700"></div>
     <button onclick="guardarGasto()" id="cg-btn" style="margin-top:16px;width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">＋ Guardar gasto</button>
     <div id="cg-msg" style="margin-top:10px;font-size:13px;min-height:18px"></div>
+    <div id="cg-recientes" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--muted)">—</div>
   </div>
 
   <!-- FORM PAGO PREX -->
@@ -707,6 +710,9 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
     <div class="pg-title" style="margin:0">🌿 Evergreen Culture <span class="chip chip-r">🔴 Alerta</span></div>
   </div>
   <div class="pg-sub">Growshop + Coffee Shop · Colonia del Sacramento · Abril 2026</div>
+  <div style="margin:12px 0 4px">
+    <button onclick="go('carga',document.getElementById('ni-carga'))" style="padding:11px 20px;background:var(--green);color:#08130d;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer">📝 Cargar operación del día — Cajas · Ventas · Gastos · Prex</button>
+  </div>
 
   <div class="g g4">
     <div class="card" style="cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--card2)'" onmouseout="this.style.background=''" onclick="showEvSub('ventas',this)">
@@ -4244,6 +4250,9 @@ function cargaTab(t){
     const bt=document.getElementById('carga-tab-'+x); if(bt) bt.classList.toggle('on',x===t);
   });
   if(t==='prex') renderPrexMes();
+  if(t==='caja') renderCajasRecientes();
+  if(t==='venta') renderVentasRecientes();
+  if(t==='gasto') renderGastosRecientes();
 }
 function cargaTotalV(){
   const c=parseFloat(document.getElementById('cv-cant').value)||0, p=parseFloat(document.getElementById('cv-precio').value)||0;
@@ -4266,6 +4275,55 @@ function cajaAuto(){
   const fin=v('cj-ini')+v('cj-efe')-v('cj-gastos')-v('cj-jorn')-v('cj-acg');
   document.getElementById('cj-fin').value=Math.round(fin);
 }
+function _hace30(hoy){ const d=new Date(hoy+'T00:00:00'); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); }
+async function renderVentasRecientes(){
+  const el=document.getElementById('cv-recientes'); if(!el) return;
+  el.style.color='var(--muted)'; el.textContent='Cargando…';
+  try{
+    const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10); const m1=hoy.slice(0,8)+'01';
+    const {data}=await _sb.from('daily_sales').select('fecha,colab,producto,cantidad,total,metodo_pago').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('id',{ascending:false}).limit(2000);
+    const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
+    let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Ventas (últimos 30 días)</div>';
+    if(rows.length){
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Colab</th><th style="text-align:left;padding:3px 6px">Producto</th><th style="text-align:right;padding:3px 6px">Cant</th><th style="text-align:right;padding:3px 6px">Total</th><th style="text-align:left;padding:3px 6px">Pago</th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.colab||'-')+'</td><td style="padding:3px 6px">'+(r.producto||'-')+'</td><td style="padding:3px 6px;text-align:right">'+(r.cantidad||'')+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+f(r.total)+'</td><td style="padding:3px 6px">'+(r.metodo_pago||'-')+'</td></tr>').join('');
+      html+='</tbody></table></div>';
+    } else { html+='<div style="color:var(--muted)">Sin ventas cargadas todavía.</div>'; }
+    el.style.color='var(--text)'; el.innerHTML=html;
+  }catch(e){ el.style.color='var(--red)'; el.textContent='No se pudo leer: '+(e.message||e); }
+}
+async function renderGastosRecientes(){
+  const el=document.getElementById('cg-recientes'); if(!el) return;
+  el.style.color='var(--muted)'; el.textContent='Cargando…';
+  try{
+    const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10); const m1=hoy.slice(0,8)+'01';
+    const {data}=await _sb.from('daily_expenses').select('fecha,proveedor,producto,unidades,total').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('id',{ascending:false}).limit(2000);
+    const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
+    let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Gastos (últimos 30 días)</div>';
+    if(rows.length){
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Proveedor</th><th style="text-align:left;padding:3px 6px">Producto</th><th style="text-align:right;padding:3px 6px">Unid</th><th style="text-align:right;padding:3px 6px">Total</th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.proveedor||'-')+'</td><td style="padding:3px 6px">'+(r.producto||'-')+'</td><td style="padding:3px 6px;text-align:right">'+(r.unidades||'')+'</td><td style="padding:3px 6px;text-align:right;color:var(--red);font-weight:600">'+f(r.total)+'</td></tr>').join('');
+      html+='</tbody></table></div>';
+    } else { html+='<div style="color:var(--muted)">Sin gastos cargados todavía.</div>'; }
+    el.style.color='var(--text)'; el.innerHTML=html;
+  }catch(e){ el.style.color='var(--red)'; el.textContent='No se pudo leer: '+(e.message||e); }
+}
+async function renderCajasRecientes(){
+  const el=document.getElementById('cj-recientes'); if(!el) return;
+  const hoy=(window.LIVE&&window.LIVE.meta&&window.LIVE.meta.hoy)?window.LIVE.meta.hoy:new Date().toISOString().slice(0,10);
+  el.style.color='var(--muted)'; el.textContent='Cargando…';
+  try{
+    const {data}=await _sb.from('daily_cashflow').select('fecha,colab,total_ventas,efectivo,tarjeta,gastos,jornales,tot_caja_efectivo_final').gte('fecha',_hace30(hoy)).lte('fecha',hoy).order('fecha',{ascending:false}).limit(400);
+    const rows=data||[]; const f=v=>'$'+Math.round(+v||0).toLocaleString('es-UY');
+    let html='<div style="font-weight:700;color:var(--text);margin-bottom:8px">Cajas (últimos 30 días)</div>';
+    if(rows.length){
+      html+='<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--muted)"><th style="text-align:left;padding:3px 6px">Fecha</th><th style="text-align:left;padding:3px 6px">Colab</th><th style="text-align:right;padding:3px 6px">Ventas</th><th style="text-align:right;padding:3px 6px">Efvo</th><th style="text-align:right;padding:3px 6px">Tarj</th><th style="text-align:right;padding:3px 6px">Gastos</th><th style="text-align:right;padding:3px 6px">Jorn</th><th style="text-align:right;padding:3px 6px">Efvo final</th></tr></thead><tbody>';
+      html+=rows.map(r=>'<tr><td style="padding:3px 6px">'+r.fecha+'</td><td style="padding:3px 6px">'+(r.colab||'-')+'</td><td style="padding:3px 6px;text-align:right;color:var(--green);font-weight:600">'+f(r.total_ventas)+'</td><td style="padding:3px 6px;text-align:right">'+f(r.efectivo)+'</td><td style="padding:3px 6px;text-align:right">'+f(r.tarjeta)+'</td><td style="padding:3px 6px;text-align:right;color:var(--red)">'+f(r.gastos)+'</td><td style="padding:3px 6px;text-align:right">'+f(r.jornales)+'</td><td style="padding:3px 6px;text-align:right;font-weight:600">'+f(r.tot_caja_efectivo_final)+'</td></tr>').join('');
+      html+='</tbody></table></div>';
+    } else { html+='<div style="color:var(--muted)">Sin cajas cargadas todavía.</div>'; }
+    el.style.color='var(--text)'; el.innerHTML=html;
+  }catch(e){ el.style.color='var(--red)'; el.textContent='No se pudo leer: '+(e.message||e); }
+}
 async function guardarCaja(){
   const msg=document.getElementById('cj-msg'), btn=document.getElementById('cj-btn');
   const v=id=>document.getElementById(id).value, n=id=>parseFloat(document.getElementById(id).value)||0;
@@ -4277,7 +4335,7 @@ async function guardarCaja(){
   if(!row.fecha){ msg.style.color='var(--red)'; msg.textContent='Falta la fecha.'; return; }
   btn.disabled=true; const ot=btn.textContent; btn.textContent='Guardando…';
   try{ const {error}=await _sb.from('daily_cashflow').upsert(row,{onConflict:'fecha'}); if(error) throw error;
-    msg.style.color='var(--green)'; msg.textContent='✓ Cierre de caja guardado ('+row.fecha+')';
+    msg.style.color='var(--green)'; msg.textContent='✓ Cierre de caja guardado ('+row.fecha+')'; renderCajasRecientes();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
 }
@@ -4296,7 +4354,7 @@ async function guardarVenta(){
     await descontarStock(row.producto, row.cantidad);
     msg.style.color='var(--green)'; msg.textContent='✓ Venta guardada: $'+row.total.toLocaleString('es-UY');
     document.getElementById('cv-producto').value=''; document.getElementById('cv-total').value='';
-    document.getElementById('cv-cant').value='1'; document.getElementById('cv-precio').value=''; _vi_cache=null; renderCargaHoy();
+    document.getElementById('cv-cant').value='1'; document.getElementById('cv-precio').value=''; _vi_cache=null; renderCargaHoy(); renderVentasRecientes();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
 }
@@ -4312,7 +4370,7 @@ async function guardarGasto(){
   try{ const {error}=await _sb.from('daily_expenses').insert(row); if(error) throw error;
     msg.style.color='var(--green)'; msg.textContent='✓ Gasto guardado: $'+row.total.toLocaleString('es-UY');
     document.getElementById('cg-producto').value=''; document.getElementById('cg-total').value='';
-    document.getElementById('cg-unid').value='1'; document.getElementById('cg-costo').value=''; _gi_cache=null; renderCargaHoy();
+    document.getElementById('cg-unid').value='1'; document.getElementById('cg-costo').value=''; _gi_cache=null; renderCargaHoy(); renderGastosRecientes();
   }catch(e){ msg.style.color='var(--red)'; msg.textContent='Error: '+(e.message||e); }
   btn.disabled=false; btn.textContent=ot;
 }
@@ -4395,7 +4453,7 @@ function applyAccessControl(){
   if(isStaffUser()){
     document.querySelectorAll('#sb .ni').forEach(n=>{ n.style.display=(n.id==='ni-carga')?'':'none'; });
     document.querySelectorAll('#sb .nl').forEach(l=>{ l.style.display=(l.textContent==='Operación')?'':'none'; });
-    if(pb) pb.style.display='none';
+    if(pb) pb.style.display='';
     go('carga', document.getElementById('ni-carga'));
   } else {
     document.querySelectorAll('#sb .ni,#sb .nl').forEach(n=>{ n.style.display=''; });
@@ -5094,7 +5152,7 @@ async function updateEgresosKPI(){
   const totalGV = totalGVtx + cfGastos;
   const totalGFsueldos = totalGFtx + cfJornales;
   const totalEgresos = totalGV + totalGFsueldos;
-  // Ventas del mes desde HIST (último mes registrado)
+  // Ventas (últimos 30 días) desde HIST (último mes registrado)
   const mLast = HIST[HIST.length-1] || {v:0};
   const ventas = mLast.v || 0;
   const pct = ventas > 0 ? Math.round(totalEgresos/ventas*100) : 0;
