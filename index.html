@@ -2244,7 +2244,24 @@ input.fx-inp{background:var(--card2);border:1px solid var(--border);border-radiu
       <button onclick="ejecutarTransfer()" style="width:100%;margin-top:12px;background:rgba(99,179,237,.25);color:var(--blue);border:1px solid rgba(99,179,237,.5);border-radius:8px;padding:10px;font-size:14px;font-weight:700;cursor:pointer">Confirmar transferencia →</button>
     </div>
 
-    <tbody id="cajas-tbody" style="display:none"></tbody>
+    <div class="card mt">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="stl">📜 Registro de movimientos</div>
+        <button onclick="clearCajas()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">Limpiar todo</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%">
+          <thead><tr>
+            <th style="text-align:left">Fecha</th>
+            <th style="text-align:left">Detalle</th>
+            <th style="text-align:left">Caja</th>
+            <th class="tr">Monto</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="cajas-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- CF ARS -->
@@ -3572,6 +3589,30 @@ function addMovCaja() {
 
   if (!fecha || !desc || isNaN(monto) || monto <= 0) { alert('Completá fecha, descripción y monto.'); return; }
 
+  // ── Prex AR se fondea SIEMPRE desde Prex UY (nunca recibe depósitos externos) ──
+  // Al ingresar plata a Prex AR, se descuenta el equivalente en UYU de Prex UY.
+  // Los gastos (egresos) de Prex AR consumen su propio saldo en ARS, normal.
+  if (_cajaTarget === 'prex_ar' && _cajaTipo === 'ingreso') {
+    const uyEquiv = convertCaja(monto, 'prex_ar', 'prex_uy'); // ARS → UYU al TC general (FX.ars)
+    if (cajaSaldoEfectivo('prex_uy') < uyEquiv) { alert('Saldo insuficiente en Prex UY (es la cuenta que fondea a Prex AR).'); return; }
+    CAJAS.prex_uy -= uyEquiv;
+    CAJAS.prex_ar += monto;
+    CAJAS_MOV.unshift({
+      id: cajasNextId++, fecha,
+      desc: `Fondeo Prex AR → ${desc} · $${monto.toLocaleString('es-UY')} ARS`,
+      cat, moneda: 'prex_uy', monto: -uyEquiv, tipo: 'transfer_out'
+    });
+    CAJAS_MOV.unshift({
+      id: cajasNextId++, fecha,
+      desc: `Fondeo ← Prex UY: ${desc}`,
+      cat, moneda: 'prex_ar', monto: monto, tipo: 'transfer_in'
+    });
+    saveCajas();
+    closeCajaForm();
+    renderCajas();
+    return;
+  }
+
   const delta = _cajaTipo === 'ingreso' ? monto : -monto;
   CAJAS[_cajaTarget] += delta;
   CAJAS_MOV.unshift({ id: cajasNextId++, fecha, desc, cat, moneda: _cajaTarget, monto: delta, tipo: _cajaTipo });
@@ -3624,6 +3665,15 @@ function previewTransfer() {
   prevEl.textContent = sym + result.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + suffix;
 }
 
+// Saldo EFECTIVO de una caja (igual al que muestra la tarjeta): base + ajustes externos.
+// Prex UY suma Posnet acreditado y resta pagos Prex; MP suma sus movimientos.
+function cajaSaldoEfectivo(k) {
+  let v = +(CAJAS[k] || 0);
+  if (k === 'prex_uy') v += +(window._posnetAcred || 0) - +(window._prexTotal || 0);
+  if (k === 'mp')      v += +(window._mpMov || 0);
+  return v;
+}
+
 function ejecutarTransfer() {
   const from  = document.getElementById('tf-from')?.value;
   const to    = document.getElementById('tf-to')?.value;
@@ -3631,7 +3681,7 @@ function ejecutarTransfer() {
 
   if (from === to) { alert('Elegí cajas distintas.'); return; }
   if (isNaN(monto) || monto <= 0) { alert('Ingresá un monto válido.'); return; }
-  if (CAJAS[from] < monto) { alert(`Saldo insuficiente en Caja ${from.toUpperCase()}.`); return; }
+  if (cajaSaldoEfectivo(from) < monto) { alert(`Saldo insuficiente en Caja ${CAJAS_LBL[from]||from}. Disponible: $${cajaSaldoEfectivo(from).toLocaleString('es-UY',{maximumFractionDigits:2})}`); return; }
 
   const result = convertCaja(monto, from, to);
   const fecha  = new Date().toISOString().split('T')[0];
